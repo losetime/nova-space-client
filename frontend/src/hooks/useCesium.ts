@@ -580,10 +580,16 @@ export function useCesium() {
       targetFrameRate: 60,
       contextOptions: {
         webgl: {
-          alpha: true,
+          alpha: false,
+          preserveDrawingBuffer: false,
         },
       },
     });
+
+    // 显示 FPS 调试信息
+    viewer.value.scene.debugShowFramesPerSecond = true;
+    // 分辨率缩放因子，值越小性能越好(0.5=一半分辨率)
+    viewer.value.resolutionScale = 0.8;
 
     // 设置相机视角 - 拉远到能看到整个地球
     viewer.value.camera.setView({
