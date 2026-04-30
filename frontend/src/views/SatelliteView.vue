@@ -569,7 +569,7 @@ const filteredCountries = computed(() => {
       return priorityA - priorityB;
     }
     if (priorityA === 50) {
-      return nameA.localeCompare(nameB);
+      return b.count - a.count;
     }
     return 0;
   });

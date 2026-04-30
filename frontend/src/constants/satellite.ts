@@ -153,7 +153,6 @@ export const COUNTRY_NAMES: Record<string, string> = {
   STCT: "空间通信",
   RASC: "俄罗斯航天局",
   SEAL: "海射公司",
-  TBD: "待定",
   ABS: "ABS公司",
   // CelesTrak I-* 格式 (国际组织)
   "I-INT": "国际通信卫星组织",
