@@ -71,7 +71,7 @@ const getRedirectPath = () => {
     const target = props.redirect || "/satellite";
     return `/login?redirect=${encodeURIComponent(target)}`;
   }
-  return props.redirect || "/membership";
+  return "/membership";
 };
 
 function handleConfirm() {
