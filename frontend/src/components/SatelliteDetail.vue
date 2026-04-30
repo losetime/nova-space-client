@@ -710,17 +710,6 @@ const expandedSections = ref({
   status: false,
 });
 
-watch(
-  () => props.metadata,
-  () => {
-    console.log("metadata-", props.metadata);
-  },
-  {
-    deep: true,
-    immediate: true,
-  },
-);
-
 const emit = defineEmits<{
   (e: "favorite-change", noradId: string, favorited: boolean): void;
 }>();

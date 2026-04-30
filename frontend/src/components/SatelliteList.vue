@@ -63,7 +63,7 @@
           <!-- 卫星图标 -->
           <div class="sat-icon">
             <div class="orbit-ring"></div>
-            <div class="sat-dot" :style="{ animationDelay: `${Math.random() * 2}s` }"></div>
+            <div class="sat-dot"></div>
           </div>
 
           <!-- 卫星信息 -->

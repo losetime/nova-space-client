@@ -39,31 +39,68 @@ export function useLocalSatellites() {
     lastUpdate: null,
   })
 
+  // 卫星对象缓存 - 避免每次更新都创建新对象
+  const satelliteCache = new Map<string, Satellite>()
+  // 记录上次更新时的时间戳，用于检测是否有实际更新
+  let lastUpdateTime = ''
+
   const satellites = computed<Satellite[]>(() => {
     const meta = metadata.value
     const pos = positions.value
+    const currentUpdateTime = workerState.value.lastUpdate || ''
 
     if (Object.keys(meta).length === 0 || pos.length === 0) {
       return []
     }
 
-    return pos.map((p) => {
+    // 检查是否有实际更新 - 如果时间戳没变且缓存已存在，直接返回缓存
+    if (currentUpdateTime === lastUpdateTime && satelliteCache.size > 0) {
+      return Array.from(satelliteCache.values())
+    }
+
+    pos.forEach((p) => {
       const m = meta[p.noradId]
-      return {
-        noradId: p.noradId,
-        name: m?.name || `卫星 ${p.noradId}`,
-        position: p.status === 'ok' ? {
+      const existing = satelliteCache.get(p.noradId)
+
+      if (existing) {
+        // 更新现有卫星 - 只修改需要更新的字段，保持对象引用稳定
+        existing.position = p.status === 'ok' ? {
           lat: p.lat,
           lng: p.lng,
           alt: p.alt,
-        } : null,
-        status: p.status,
-        timestamp: workerState.value.lastUpdate || new Date().toISOString(),
-        countryCode: m?.countryCode,
-        mission: m?.mission,
-        operator: m?.operator,
+        } : null
+        existing.status = p.status
+        existing.timestamp = currentUpdateTime || new Date().toISOString()
+
+        // metadata 变化时也更新
+        if (m) {
+          existing.name = m.name || `卫星 ${p.noradId}`
+          existing.countryCode = m.countryCode
+          existing.mission = m.mission
+          existing.operator = m.operator
+        }
+      } else {
+        // 创建新卫星对象
+        const newSat: Satellite = {
+          noradId: p.noradId,
+          name: m?.name || `卫星 ${p.noradId}`,
+          position: p.status === 'ok' ? {
+            lat: p.lat,
+            lng: p.lng,
+            alt: p.alt,
+          } : null,
+          status: p.status,
+          timestamp: currentUpdateTime || new Date().toISOString(),
+          countryCode: m?.countryCode,
+          mission: m?.mission,
+          operator: m?.operator,
+        }
+        satelliteCache.set(p.noradId, newSat)
       }
     })
+
+    lastUpdateTime = currentUpdateTime
+    return Array.from(satelliteCache.values())
   })
 
   const satelliteCount = computed(() => {
@@ -157,6 +194,8 @@ export function useLocalSatellites() {
   }
 
   const refresh = async () => {
+    satelliteCache.clear()
+    lastUpdateTime = ''
     terminate()
     await loadTLEData()
   }
@@ -171,6 +210,8 @@ export function useLocalSatellites() {
 
   const disconnect = () => {
     terminate()
+    satelliteCache.clear()
+    lastUpdateTime = ''
     state.value.status = 'idle'
   }
 
