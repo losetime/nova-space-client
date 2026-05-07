@@ -15,8 +15,7 @@
           <span class="subtitle">从这里开始</span>
         </h1>
         <p class="hero-desc">
-          诺维空间探索平台 ——
-          集卫星数据态势展示、航天知识科普、航天情报分级服务于一体的综合航天信息平台
+          星瞰 —— 集卫星数据态势展示、航天知识科普、航天情报分级服务于一体的综合航天信息平台
         </p>
         <div class="hero-actions">
           <a-button type="primary" size="large" class="cta-btn" @click="$router.push('/satellite')">

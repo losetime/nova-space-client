@@ -6,7 +6,7 @@ const testUser = {
   password: "Test123456",
 };
 
-test.describe("Navi Space 前端测试", () => {
+test.describe("星瞰 前端测试", () => {
   test("首页加载", async ({ page }) => {
     await page.goto("/");
     // 首页 h1 文案是 "探索宇宙 从这里开始"

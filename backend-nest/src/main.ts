@@ -37,7 +37,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   await app.listen(port);
-  logger.log(`🚀 Navi Space Backend running on: http://localhost:${port}/api`);
+  logger.log(`🚀 星瞰 Backend running on: http://localhost:${port}/api`);
 }
 
 void bootstrap();

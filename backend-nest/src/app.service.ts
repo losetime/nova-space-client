@@ -9,7 +9,7 @@ export class AppService {
   constructor(@Inject(DRIZZLE) private db: DrizzleClient) {}
 
   getHello(): string {
-    return 'Navi Space API v1.0.0';
+    return '星瞰 API v1.0.0';
   }
 
   async getStats() {
