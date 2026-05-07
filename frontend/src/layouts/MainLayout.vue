@@ -127,7 +127,7 @@
     </main>
 
     <!-- 底部 -->
-    <footer class="footer">
+    <footer v-if="route.path !== '/satellite'" class="footer">
       <div class="footer-content">
         <p>© 2026 Navi Space. All rights reserved.</p>
         <div class="footer-links">
@@ -491,7 +491,7 @@ function getLevelText(level?: string) {
 
 .main-content {
   flex: 1;
-  margin-top: 70px;
+  margin-top: 62px;
   min-height: calc(100vh - 70px - 60px);
 }
 
