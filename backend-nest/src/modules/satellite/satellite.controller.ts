@@ -386,6 +386,7 @@ export class SatelliteController {
    * @param startTime 开始时间（ISO格式，默认当前）
    * @param duration 持续时间（分钟，默认360，最大1440）
    * @param steps 轨道点数（默认100，最大500）
+   * @param intervalSeconds 固定采样间隔（秒），优先级高于 steps
    */
   @Get(':noradId/predict')
   predictOrbit(
@@ -393,6 +394,7 @@ export class SatelliteController {
     @Query('startTime') startTime?: string,
     @Query('duration') duration?: string,
     @Query('steps') steps?: string,
+    @Query('intervalSeconds') intervalSeconds?: string,
   ) {
     this.logger.log(`预测卫星 ${noradId} 的轨道`);
 
@@ -415,6 +417,7 @@ export class SatelliteController {
       1440,
     );
     const start = startTime ? new Date(startTime) : new Date();
+    const actualIntervalSeconds = intervalSeconds ? parseInt(intervalSeconds) : undefined;
 
     // 验证时间
     if (isNaN(start.getTime())) {
@@ -430,6 +433,7 @@ export class SatelliteController {
       start,
       durationMinutes,
       orbitSteps,
+      actualIntervalSeconds,
     );
 
     return {

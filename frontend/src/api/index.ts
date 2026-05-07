@@ -593,6 +593,7 @@ export const satelliteApi = {
     startTime?: string
     duration?: number
     steps?: number
+    intervalSeconds?: number
   }) =>
     api.get<ApiResponse<OrbitPrediction>>(`/satellites/${noradId}/predict`, { params }),
 

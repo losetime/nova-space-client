@@ -32,20 +32,11 @@
 
       <!-- 预测按钮 -->
       <div class="predict-btn-wrapper">
-        <a-button
-          type="primary"
-          class="predict-btn"
-          :loading="loading"
-          @click="handlePredict"
-        >
+        <a-button type="primary" class="predict-btn" :loading="loading" @click="handlePredict">
           <template #icon><CalculatorOutlined /></template>
           开始预测
         </a-button>
-        <a-button
-          class="clear-btn"
-          dashed
-          @click="handleClearOrbit"
-        >
+        <a-button class="clear-btn" dashed @click="handleClearOrbit">
           <template #icon><DeleteOutlined /></template>
           清除轨道
         </a-button>
@@ -61,7 +52,7 @@
         <div class="result-stats">
           <div class="stat-item">
             <span class="stat-label">轨道周期</span>
-            <span class="stat-value">{{ prediction.orbitalPeriod || '--' }} 分钟</span>
+            <span class="stat-value">{{ prediction.orbitalPeriod || "--" }} 分钟</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">预测时长</span>
@@ -95,13 +86,18 @@
                 <div class="point-info">
                   <span class="point-time">{{ formatTime(point.timestamp) }}</span>
                   <span class="point-coords">
-                    {{ point.lat.toFixed(2) }}°, {{ point.lng.toFixed(2) }}°
+                    纬度:{{ point.lat.toFixed(2) }}°, 经度:{{ point.lng.toFixed(2) }}°
                   </span>
                 </div>
-                <div class="point-alt">{{ (point.alt / 1000).toFixed(0) }} km</div>
+                <div class="point-alt">{{ (point.alt / 1000).toFixed(2) }} km</div>
+                <!-- <div class="point-alt">{{ point.alt }} km</div> -->
               </div>
-              <div v-if="prediction.orbit.length > 10" class="show-more" @click="showAllPoints = !showAllPoints">
-                {{ showAllPoints ? '收起' : `显示全部 ${prediction.orbit.length} 个点` }}
+              <div
+                v-if="prediction.orbit.length > 10"
+                class="show-more"
+                @click="showAllPoints = !showAllPoints"
+              >
+                {{ showAllPoints ? "收起" : `显示全部 ${prediction.orbit.length} 个点` }}
               </div>
             </div>
           </transition>
@@ -167,153 +163,154 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import dayjs, { type Dayjs } from 'dayjs'
+import { ref, computed } from "vue";
+import dayjs, { type Dayjs } from "dayjs";
 import {
   CalculatorOutlined,
   DeleteOutlined,
   DownOutlined,
   EnvironmentOutlined,
-} from '@ant-design/icons-vue'
-import { message } from 'ant-design-vue'
-import { satelliteApi, type OrbitPrediction, type PositionPrediction } from '@/api'
-import type { Satellite } from '@/hooks/useLocalSatellites'
+} from "@ant-design/icons-vue";
+import { message } from "ant-design-vue";
+import { satelliteApi, type OrbitPrediction, type PositionPrediction } from "@/api";
+import type { Satellite } from "@/hooks/useLocalSatellites";
 
 const props = defineProps<{
-  satellite: Satellite | null
-}>()
+  satellite: Satellite | null;
+}>();
 
 const emit = defineEmits<{
-  (e: 'showOrbit', points: Array<{ lat: number; lng: number; alt: number }>): void
-  (e: 'flyTo', position: { lat: number; lng: number; alt: number }): void
-  (e: 'clearOrbit', noradId: string): void
-  (e: 'removeOrbit', noradId: string): void
-  (e: 'restoreOrbit', noradId: string): void
-  (e: 'markPoint', position: { lat: number; lng: number; alt: number }, label: string): void
-}>()
+  (e: "showOrbit", points: Array<{ lat: number; lng: number; alt: number }>): void;
+  (e: "flyTo", position: { lat: number; lng: number; alt: number }): void;
+  (e: "clearOrbit", noradId: string): void;
+  (e: "removeOrbit", noradId: string): void;
+  (e: "restoreOrbit", noradId: string): void;
+  (e: "markPoint", position: { lat: number; lng: number; alt: number }, label: string): void;
+}>();
 
 // 重置预测数据
 const reset = () => {
-  prediction.value = null
-  positionResult.value = null
-  showPoints.value = false
-  showAllPoints.value = false
-}
+  prediction.value = null;
+  positionResult.value = null;
+  showPoints.value = false;
+  showAllPoints.value = false;
+};
 
 // 暴露给父组件调用
-defineExpose({ reset })
+defineExpose({ reset });
 
 // 预测参数
-const duration = ref(360)
-const startTime = ref<Dayjs>(dayjs())
-const loading = ref(false)
-const prediction = ref<OrbitPrediction | null>(null)
-const showPoints = ref(false)
-const showAllPoints = ref(false)
+const duration = ref(360);
+const startTime = ref<Dayjs>(dayjs());
+const loading = ref(false);
+const prediction = ref<OrbitPrediction | null>(null);
+const showPoints = ref(false);
+const showAllPoints = ref(false);
 
 // 单点位置预测
-const positionTime = ref<Dayjs>(dayjs())
-const positionLoading = ref(false)
-const positionResult = ref<PositionPrediction | null>(null)
+const positionTime = ref<Dayjs>(dayjs());
+const positionLoading = ref(false);
+const positionResult = ref<PositionPrediction | null>(null);
 
 // 显示的轨道点（默认只显示前10个）
 const displayPoints = computed(() => {
-  if (!prediction.value) return []
-  if (showAllPoints.value) return prediction.value.orbit
-  return prediction.value.orbit.slice(0, 10)
-})
+  if (!prediction.value) return [];
+  if (showAllPoints.value) return prediction.value.orbit;
+  return prediction.value.orbit.slice(0, 10);
+});
 
 // 禁用过去的日期
 const disabledDate = (current: Dayjs) => {
-  return current && current < dayjs().startOf('day')
-}
+  return current && current < dayjs().startOf("day");
+};
 
 // 格式化时间
 const formatTime = (time: string | undefined) => {
-  if (!time) return '--'
-  return dayjs(time).format('MM-DD HH:mm')
-}
+  if (!time) return "--";
+  return dayjs(time).format("MM-DD HH:mm:ss");
+};
 
 // 清除轨道
 const handleClearOrbit = () => {
   if (props.satellite) {
-    emit('clearOrbit', props.satellite.noradId)
+    emit("clearOrbit", props.satellite.noradId);
     // 恢复详情轨道
-    emit('restoreOrbit', props.satellite.noradId)
-    prediction.value = null
+    emit("restoreOrbit", props.satellite.noradId);
+    prediction.value = null;
   }
-}
+};
 
 // 开始预测
 const handlePredict = async () => {
-  if (!props.satellite) return
+  if (!props.satellite) return;
 
   // 清除之前的预测结果
-  prediction.value = null
-  positionResult.value = null
-  showPoints.value = false
-  showAllPoints.value = false
+  prediction.value = null;
+  positionResult.value = null;
+  showPoints.value = false;
+  showAllPoints.value = false;
 
   // 删除详情轨道（避免干扰预测轨道显示）
-  emit('removeOrbit', props.satellite.noradId)
+  emit("removeOrbit", props.satellite.noradId);
   // 清除之前的预测轨道
-  emit('clearOrbit', props.satellite.noradId)
+  emit("clearOrbit", props.satellite.noradId);
 
-  loading.value = true
+  loading.value = true;
   try {
     const res = await satelliteApi.predictOrbit(props.satellite.noradId, {
       startTime: startTime.value.toISOString(),
       duration: duration.value,
-      steps: Math.min(duration.value, 200), // 最多200个点
-    })
+      steps: Math.min(duration.value, 200),
+      intervalSeconds: 60, // 60秒采样间隔，与SpaceMapper对齐
+    });
 
     if (res.data.code === 0) {
-      prediction.value = res.data.data
+      prediction.value = res.data.data;
       // 通知父组件显示轨道
-      emit('showOrbit', prediction.value.orbit)
+      emit("showOrbit", prediction.value.orbit);
     } else {
-      message.error(res.data.message || '轨道预测失败')
+      message.error(res.data.message || "轨道预测失败");
     }
   } catch (error: unknown) {
-    console.error('轨道预测失败:', error)
-    const err = error as { response?: { data?: { message?: string } }; message?: string }
-    message.error(err.response?.data?.message || err.message || '轨道预测请求失败，请稍后重试')
+    console.error("轨道预测失败:", error);
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
+    message.error(err.response?.data?.message || err.message || "轨道预测请求失败，请稍后重试");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // 单点位置预测
 const handlePositionPredict = async () => {
-  if (!props.satellite) return
+  if (!props.satellite) return;
 
-  positionLoading.value = true
+  positionLoading.value = true;
   try {
     const res = await satelliteApi.predictPosition(
       props.satellite.noradId,
-      positionTime.value.toISOString()
-    )
+      positionTime.value.toISOString(),
+    );
 
     if (res.data.code === 0) {
-      positionResult.value = res.data.data
+      positionResult.value = res.data.data;
       // 标记这个位置
-      emit('markPoint', res.data.data.position, positionTime.value.format('MM-DD HH:mm'))
+      emit("markPoint", res.data.data.position, positionTime.value.format("MM-DD HH:mm"));
     } else {
-      message.error(res.data.message || '位置预测失败')
+      message.error(res.data.message || "位置预测失败");
     }
   } catch (error: unknown) {
-    console.error('位置预测失败:', error)
-    const err = error as { response?: { data?: { message?: string } }; message?: string }
-    message.error(err.response?.data?.message || err.message || '位置预测请求失败，请稍后重试')
+    console.error("位置预测失败:", error);
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
+    message.error(err.response?.data?.message || err.message || "位置预测请求失败，请稍后重试");
   } finally {
-    positionLoading.value = false
+    positionLoading.value = false;
   }
-}
+};
 
 // 点击轨道点
 const handlePointClick = (point: { lat: number; lng: number; alt: number; timestamp?: string }) => {
-  emit('flyTo', point)
-}
+  emit("flyTo", point);
+};
 </script>
 
 <style scoped lang="scss">

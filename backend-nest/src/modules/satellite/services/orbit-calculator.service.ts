@@ -177,12 +177,14 @@ export class OrbitCalculatorService implements OnModuleInit {
    * @param startTime 开始时间
    * @param durationMinutes 持续时间（分钟）
    * @param steps 轨道点数
+   * @param intervalSeconds 固定采样间隔（秒），优先级高于 steps
    */
   predictOrbit(
     noradId: string,
     startTime: Date,
     durationMinutes: number,
     steps: number = 100,
+    intervalSeconds?: number,
   ): OrbitPrediction | null {
     const sat = this.satellites.get(noradId);
     if (!sat) {
@@ -190,9 +192,18 @@ export class OrbitCalculatorService implements OnModuleInit {
     }
 
     const orbit: OrbitPoint[] = [];
-    const intervalMs = (durationMinutes * 60 * 1000) / steps;
+    let actualSteps: number;
+    let intervalMs: number;
 
-    for (let i = 0; i <= steps; i++) {
+    if (intervalSeconds !== undefined) {
+      actualSteps = Math.floor((durationMinutes * 60 * 1000) / (intervalSeconds * 1000));
+      intervalMs = intervalSeconds * 1000;
+    } else {
+      actualSteps = steps;
+      intervalMs = (durationMinutes * 60 * 1000) / steps;
+    }
+
+    for (let i = 0; i <= actualSteps; i++) {
       const time = new Date(startTime.getTime() + i * intervalMs);
       const point = this.calculateOrbitPoint(sat, time);
       if (point) {
