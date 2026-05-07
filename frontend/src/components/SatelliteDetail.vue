@@ -257,12 +257,12 @@
                     :class="[
                       'feature-value',
                       {
-                        warning: metadata.tleAge != null && metadata.tleAge > 7,
-                        old: metadata.tleAge != null && metadata.tleAge > 14,
+                        warning: computedTleAge != null && computedTleAge > 7,
+                        old: computedTleAge != null && computedTleAge > 14,
                       },
                     ]"
                   >
-                    {{ metadata.tleAge != null ? `${metadata.tleAge} 天` : "--" }}
+                    {{ computedTleAge != null ? `${computedTleAge} 天` : "--" }}
                   </span>
                 </div>
               </div>
@@ -655,7 +655,6 @@ interface SatelliteMetadata {
   rcs?: string;
   stdMag?: number;
   tleEpoch?: string;
-  tleAge?: number;
   cosparId?: string;
   objectClass?: string;
   mission?: string;
@@ -725,6 +724,13 @@ const canViewLaunch = computed(() => userStore.hasFeature("satellite_launch"));
 const canViewMission = computed(() => userStore.hasFeature("satellite_mission"));
 const canViewStatus = computed(() => userStore.hasFeature("satellite_status"));
 const canViewOrbit = computed(() => userStore.hasFeature("satellite_orbit_params"));
+
+// TLE 年龄实时计算
+const computedTleAge = computed(() => {
+  if (!props.metadata?.tleEpoch) return null;
+  const epochDate = new Date(props.metadata?.tleEpoch);
+  return Math.floor((Date.now() - epochDate.getTime()) / (1000 * 60 * 60 * 24));
+});
 
 // 公司详情弹窗状态
 const companyDetailVisible = ref(false);

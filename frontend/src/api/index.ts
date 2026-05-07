@@ -530,7 +530,6 @@ export interface SatelliteDetail {
     rcs?: string
     stdMag?: number
     tleEpoch?: string
-    tleAge?: number
     // ESA DISCOS 扩展字段
     cosparId?: string
     objectClass?: string
