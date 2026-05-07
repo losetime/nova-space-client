@@ -584,12 +584,31 @@ export function useCesium() {
           preserveDrawingBuffer: false,
         },
       },
+      // imageryProvider: new Cesium.UrlTemplateImageryProvider({
+      //   url: "https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}",
+      //   subdomains: ["1", "2", "3", "4"],
+      //   credit: "© 高德地图",
+      //   maximumLevel: 18,
+      // }),
+      // terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     });
 
     // 显示 FPS 调试信息
     viewer.value.scene.debugShowFramesPerSecond = true;
     // 分辨率缩放因子，值越小性能越好(0.5=一半分辨率)
     viewer.value.resolutionScale = 0.8;
+
+    // 地球底图-天地图
+    const gaodeProvider = new Cesium.WebMapTileServiceImageryProvider({
+      url: "http://t0.tianditu.gov.cn/img_w/wmts?tk=" + "a4106e02d1c9fdf59cff2dbde5b9e4c8",
+      layer: "img",
+      style: "default",
+      format: "tiles",
+      tileMatrixSetID: "w",
+      subdomains: ["t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"],
+      maximumLevel: 18,
+    });
+    viewer.value.imageryLayers.addImageryProvider(gaodeProvider);
 
     // 设置相机视角 - 拉远到能看到整个地球
     viewer.value.camera.setView({
