@@ -600,7 +600,7 @@ export function useCesium() {
 
     // 地球底图-天地图
     const gaodeProvider = new Cesium.WebMapTileServiceImageryProvider({
-      url: "http://t0.tianditu.gov.cn/img_w/wmts?tk=" + "a4106e02d1c9fdf59cff2dbde5b9e4c8",
+      url: "https://t0.tianditu.gov.cn/img_w/wmts?tk=" + "a4106e02d1c9fdf59cff2dbde5b9e4c8",
       layer: "img",
       style: "default",
       format: "tiles",
