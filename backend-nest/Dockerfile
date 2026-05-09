@@ -12,7 +12,14 @@ COPY package.json pnpm-lock.yaml ./
 RUN npm install -g pnpm
 
 # 使用 pnpm 代替 npm
-RUN pnpm install --frozen-lockfile
+# --ignore-scripts 先跳过脚本
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# 允许所有包的脚本构建，针对pnpm v11版本
+RUN pnpm approve-builds --all
+
+# 重新构建所有被忽略的包
+RUN pnpm rebuild
 
 # 复制源代码
 COPY . .
