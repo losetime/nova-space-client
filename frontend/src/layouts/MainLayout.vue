@@ -10,8 +10,8 @@
 
         <!-- Logo -->
         <div class="logo" @click="router.push('/')">
-          <img src="/favicon.svg?v=2" alt="星瞰" class="logo-icon" />
-          <span class="logo-text">星瞰</span>
+          <img src="/favicon.svg?v=2" alt="星揽" class="logo-icon" />
+          <span class="logo-text">星揽</span>
         </div>
 
         <!-- 主导航 -->
@@ -104,8 +104,8 @@
     >
       <div class="mobile-nav-header">
         <div class="mobile-nav-logo" @click="router.push('/')">
-          <img src="/favicon.svg?v=2" alt="星瞰" class="logo-icon" />
-          <span class="logo-text">星瞰</span>
+          <img src="/favicon.svg?v=2" alt="星揽" class="logo-icon" />
+          <span class="logo-text">星揽</span>
         </div>
       </div>
       <nav class="mobile-nav">
@@ -129,7 +129,7 @@
     <!-- 底部 -->
     <footer v-if="route.path !== '/satellite'" class="footer">
       <div class="footer-content">
-        <p>© 2026 星瞰. All rights reserved.</p>
+        <p>© 2026 星揽. All rights reserved.</p>
         <div class="footer-links">
           <a
             href="http://www.nwbd.net/?m=home&c=Lists&a=index&tid=8"

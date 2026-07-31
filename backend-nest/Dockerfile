@@ -42,7 +42,7 @@ ENV NODE_ENV=production
 COPY package.json pnpm-lock.yaml ./
 
 # 只安装生产依赖
-RUN pnpm install --prod
+RUN pnpm install --prod --ignore-scripts && pnpm approve-builds --all && pnpm rebuild
 
 # 从构建阶段复制编译后的文件
 COPY --from=builder /app/dist ./dist

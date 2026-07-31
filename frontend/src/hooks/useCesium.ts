@@ -596,7 +596,7 @@ export function useCesium() {
     // 显示 FPS 调试信息
     viewer.value.scene.debugShowFramesPerSecond = true;
     // 分辨率缩放因子，值越小性能越好(0.5=一半分辨率)
-    viewer.value.resolutionScale = 0.8;
+    viewer.value.resolutionScale = 1.0;
 
     // 地球底图-天地图
     const gaodeProvider = new Cesium.WebMapTileServiceImageryProvider({

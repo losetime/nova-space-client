@@ -8,10 +8,10 @@
     <div class="auth-left">
       <div class="brand-content">
         <div class="logo">
-          <img src="/favicon.svg?v=2" alt="星瞰" class="logo-icon" />
+          <img src="/favicon.svg?v=2" alt="星揽" class="logo-icon" />
         </div>
         <h1 class="brand-title">
-          <span class="gradient-text">星瞰</span>
+          <span class="gradient-text">星揽</span>
         </h1>
         <p class="brand-desc">探索宇宙，从这里开始</p>
       </div>
