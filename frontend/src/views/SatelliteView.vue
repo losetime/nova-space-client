@@ -692,7 +692,7 @@ const {
 } = usePanel();
 
 // 解构本地卫星数据
-const { satellites, satelliteCount, lastUpdate } = localSatellites;
+const { satellites, satelliteCount, lastUpdate, positions, validIds } = localSatellites;
 
 // 格式化最后更新时间
 const formattedLastUpdate = computed(() => {
@@ -995,6 +995,28 @@ const handlePlayPassAnimation = async (data: {
     console.error("播放过境动画失败:", error);
   }
 };
+
+// 下发有效卫星索引（结构建立前先就绪）
+watch(
+  validIds,
+  (list) => {
+    if (list && list.length > 0) {
+      cesium.setValidSatelliteIds(list);
+    }
+  },
+  { immediate: true },
+);
+
+// 高频位置热路径：位置批次直连渲染器，绕过响应式链
+watch(
+  positions,
+  (batch) => {
+    if (batch && batch.ecef.length > 0) {
+      cesium.updatePositions(batch.ecef, batch.validMask);
+    }
+  },
+  { flush: "sync" },
+);
 
 // 监听筛选后的卫星数据变化，更新 Cesium（移除 deep watch，只监听数组引用变化）
 watch(filteredSatellites, (newSatellites) => {

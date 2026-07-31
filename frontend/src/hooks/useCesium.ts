@@ -1,4 +1,4 @@
-import { ref, onUnmounted } from "vue";
+import { ref, shallowRef, onUnmounted } from "vue";
 import * as Cesium from "cesium";
 import satelliteModelUrl from "@/assets/satellite.glb";
 import { GlobeAutoRotate } from "./useGlobeAutoRotate";
@@ -90,6 +90,14 @@ class SatelliteRenderer {
 
   // 缓存上一次的卫星 ID 集合（用于增量更新）
   private lastSatelliteIds: Set<string> = new Set();
+
+  // 卫星 ECEF 缓冲索引（noradId -> 批次内索引），与 worker 的 validIds 顺序对齐
+  private bufferIndexByNoradId: Map<string, number> = new Map();
+  // 卫星位置临时对象池，避免每帧创建新 Cartesian3
+  private scratchByNoradId: Map<string, Cesium.Cartesian3> = new Map();
+  // 最近一次 ECEF 位置缓冲（结构更新时用于初始位置）
+  private lastEcef: Float32Array | null = null;
+  private selectedScratch: Cesium.Cartesian3 | null = null;
 
   constructor(viewer: Cesium.Viewer) {
     this.viewer = viewer;
@@ -243,9 +251,20 @@ class SatelliteRenderer {
     }
   }
 
-  // 批量更新卫星位置（分批异步更新优化）
-  updateSatellites(satellites: Satellite[], batchSize: number = 2000) {
-    const currentIds = new Set(satellites.map((s) => s.noradId));
+  // 设置有效卫星的 ECEF 缓冲索引（与 worker 的 validIds 顺序一致）
+  setValidSatelliteIds(validIds: string[]) {
+    this.bufferIndexByNoradId.clear();
+    validIds.forEach((id, index) => {
+      this.bufferIndexByNoradId.set(id, index);
+    });
+  }
+
+  // 结构更新：仅在筛选/首帧等列表变化时执行增删，位置交由 updatePositions 驱动
+  updateSatellites(satellites: Satellite[]) {
+    const currentIds = new Set<string>();
+    for (let i = 0; i < satellites.length; i++) {
+      currentIds.add(satellites[i]!.noradId);
+    }
 
     // 1. 同步删除不在新列表中的卫星（数量通常很少）
     this.lastSatelliteIds.forEach((id) => {
@@ -255,80 +274,111 @@ class SatelliteRenderer {
           this.pointCollection.remove(point);
         }
         this.pointMap.delete(id);
+        this.scratchByNoradId.delete(id);
         this.satellitePositions.delete(id);
         this.orbitTypeCache.delete(id);
       }
     });
 
-    // 2. 分批异步更新卫星位置
-    let currentIndex = 0;
-    const total = satellites.length;
+    // 2. 新增卫星（位置从 ECEF 缓存读取，避免经纬度换算）
+    for (let i = 0; i < satellites.length; i++) {
+      const sat = satellites[i]!;
+      if (this.pointMap.has(sat.noradId)) continue;
 
-    const processBatch = () => {
-      const endIndex = Math.min(currentIndex + batchSize, total);
+      const bufferIdx = this.bufferIndexByNoradId.get(sat.noradId);
+      // 解析失败或不在传播池中的卫星不渲染
+      if (bufferIdx === undefined) continue;
 
-      for (let i = currentIndex; i < endIndex; i++) {
-        const sat = satellites[i]!;
-        if (
-          !sat.position ||
-          sat.position.lng === null ||
-          sat.position.lat === null ||
-          sat.position.alt === null
-        )
-          continue;
+      const initialPosition = this.createInitialPosition(bufferIdx, sat);
+      const orbitType = getOrbitType(sat.position?.alt ?? 0);
+      this.orbitTypeCache.set(sat.noradId, orbitType);
+      const color = ORBIT_COLORS[orbitType]?.color || this.DEFAULT_COLOR;
 
-        const position = Cesium.Cartesian3.fromDegrees(
-          sat.position.lng,
-          sat.position.lat,
-          sat.position.alt,
+      const point = this.pointCollection!.add({
+        position: initialPosition,
+        pixelSize: this.DEFAULT_PIXEL_SIZE,
+        color,
+        id: sat.noradId,
+        show: this.lastEcef !== null,
+      });
+      this.pointMap.set(sat.noradId, point);
+      this.scratchByNoradId.set(sat.noradId, initialPosition);
+      this.satellitePositions.set(sat.noradId, {
+        name: sat.name,
+        position: point.position,
+        alt: sat.position?.alt ?? 0,
+      });
+    }
+
+    this.lastSatelliteIds = currentIds;
+  }
+
+  // 从 ECEF 缓存或经纬度构造初始位置（ECEF 优先，单位：米）
+  private createInitialPosition(bufferIdx: number, sat: Satellite): Cesium.Cartesian3 {
+    const ecef = this.lastEcef;
+    const base = bufferIdx * 3;
+    if (ecef && base + 2 < ecef.length) {
+      return new Cesium.Cartesian3(ecef[base], ecef[base + 1], ecef[base + 2]);
+    }
+    if (sat.position && sat.position.lng !== null && sat.position.lat !== null) {
+      return Cesium.Cartesian3.fromDegrees(
+        sat.position.lng,
+        sat.position.lat,
+        sat.position.alt ?? 0,
+      );
+    }
+    return new Cesium.Cartesian3(0, 0, 0);
+  }
+
+  // 高频位置热路径：直接将 ECEF 批量写入 PointPrimitive（只写坐标，无重建）
+  updatePositions(ecef: Float32Array, validMask: Uint8Array) {
+    this.lastEcef = ecef;
+    if (this.pointMap.size === 0) return;
+
+    const indexMap = this.bufferIndexByNoradId;
+    const selectedIdx = this.selectedNoradId
+      ? indexMap.get(this.selectedNoradId)
+      : undefined;
+
+    this.pointMap.forEach((point, noradId) => {
+      const idx = indexMap.get(noradId);
+      if (idx === undefined) return;
+      const base = idx * 3;
+      if (base + 2 >= ecef.length) return;
+
+      const valid = validMask[idx] === 1;
+      if (valid !== point.show) {
+        point.show = valid;
+      }
+      if (!valid) return;
+
+      const scratch = this.scratchByNoradId.get(noradId);
+      if (!scratch) return;
+      scratch.x = ecef[base]!;
+      scratch.y = ecef[base + 1]!;
+      scratch.z = ecef[base + 2]!;
+      point.position = scratch;
+    });
+
+    // 选中的卫星（3D 模型 + 标签）同步跟随
+    if (selectedIdx !== undefined && validMask[selectedIdx] === 1) {
+      const base = selectedIdx * 3;
+      if (base + 2 >= ecef.length) return;
+      if (!this.selectedScratch) {
+        this.selectedScratch = new Cesium.Cartesian3();
+      }
+      this.selectedScratch.x = ecef[base]!;
+      this.selectedScratch.y = ecef[base + 1]!;
+      this.selectedScratch.z = ecef[base + 2]!;
+      if (this.selectedModel) {
+        (this.selectedModel.position as Cesium.ConstantPositionProperty).setValue(
+          this.selectedScratch,
         );
-
-        if (this.pointMap.has(sat.noradId)) {
-          // 已存在的卫星：只更新位置，不重新计算颜色
-          const point = this.pointMap.get(sat.noradId)!;
-          point.position = position;
-
-          if (sat.noradId === this.selectedNoradId) {
-            if (this.selectedModel) {
-              this.selectedModel.position = new Cesium.ConstantPositionProperty(position);
-            }
-            if (this.selectedLabel) {
-              this.selectedLabel.position = position;
-            }
-          }
-        } else {
-          // 新卫星：计算并缓存颜色
-          const orbitType = getOrbitType(sat.position.alt);
-          this.orbitTypeCache.set(sat.noradId, orbitType);
-          const color = ORBIT_COLORS[orbitType]?.color || this.DEFAULT_COLOR;
-
-          const point = this.pointCollection!.add({
-            position,
-            pixelSize: this.DEFAULT_PIXEL_SIZE,
-            color,
-            id: sat.noradId,
-          });
-          this.pointMap.set(sat.noradId, point);
-        }
-
-        this.satellitePositions.set(sat.noradId, {
-          name: sat.name,
-          position,
-          alt: sat.position.alt,
-        });
       }
-
-      currentIndex = endIndex;
-
-      if (currentIndex < total) {
-        requestAnimationFrame(processBatch);
-      } else {
-        // 所有批次完成，更新缓存
-        this.lastSatelliteIds = currentIds;
+      if (this.selectedLabel) {
+        this.selectedLabel.position = this.selectedScratch;
       }
-    };
-
-    processBatch();
+    }
   }
 
   // 获取卫星颜色（基于分类方式）
@@ -505,6 +555,7 @@ class SatelliteRenderer {
   clearAllSatellites() {
     this.pointCollection?.removeAll();
     this.pointMap.clear();
+    this.scratchByNoradId.clear();
     this.satellitePositions.clear();
     this.lastSatelliteIds.clear();
     this.orbitTypeCache.clear();
@@ -539,6 +590,7 @@ class SatelliteRenderer {
       this.selectedModel = null;
     }
     this.pointMap.clear();
+    this.scratchByNoradId.clear();
     this.satellitePositions.clear();
     this.lastSatelliteIds.clear();
     this.orbitTypeCache.clear();
@@ -546,8 +598,8 @@ class SatelliteRenderer {
 }
 
 export function useCesium() {
-  const viewer = ref<Cesium.Viewer | null>(null);
-  const satelliteRenderer = ref<SatelliteRenderer | null>(null);
+  const viewer = shallowRef<Cesium.Viewer | null>(null);
+  const satelliteRenderer = shallowRef<SatelliteRenderer | null>(null);
   const predictedOrbitEntities = new Map();
   const isInitialized = ref(false);
 
@@ -593,10 +645,11 @@ export function useCesium() {
       // terrainProvider: new Cesium.EllipsoidTerrainProvider(),
     });
 
-    // 显示 FPS 调试信息
-    viewer.value.scene.debugShowFramesPerSecond = true;
     // 分辨率缩放因子，值越小性能越好(0.5=一半分辨率)
     viewer.value.resolutionScale = 1.0;
+
+    // 调试：显示 FPS 与帧间隔（左上角）
+    viewer.value.scene.debugShowFramesPerSecond = true;
 
     // 地球底图-天地图
     const gaodeProvider = new Cesium.WebMapTileServiceImageryProvider({
@@ -656,10 +709,16 @@ export function useCesium() {
     satelliteRenderer.value.clearAllSatellites();
   };
 
-  // 更新单个卫星位置（兼容旧接口，但推荐使用 updateSatellites）
-  const updateSatellitePosition = (satellite: Satellite) => {
+  // 下发有效卫星索引（ECEF 缓冲索引映射）
+  const setValidSatelliteIds = (validIds: string[]) => {
     if (!satelliteRenderer.value) return;
-    satelliteRenderer.value.updateSatellites([satellite]);
+    satelliteRenderer.value.setValidSatelliteIds(validIds);
+  };
+
+  // 高频更新所有卫星位置（ECEF 直接写入，最热路径）
+  const updatePositions = (ecef: Float32Array, validMask: Uint8Array) => {
+    if (!satelliteRenderer.value) return;
+    satelliteRenderer.value.updatePositions(ecef, validMask);
   };
 
   // 更新卫星轨道（使用 PolylineCollection 优化）
@@ -1525,20 +1584,40 @@ export function useCesium() {
     if (!satellite || !viewer.value) return;
 
     const { position } = satellite;
+    let destination: Cesium.Cartesian3 | null = null;
 
-    if (!position || position.lng === null || position.lat === null || position.alt === null) {
-      return;
+    if (
+      position &&
+      position.lng !== null &&
+      position.lat !== null &&
+      position.alt !== null &&
+      !isNaN(position.lng) &&
+      !isNaN(position.lat) &&
+      !isNaN(position.alt)
+    ) {
+      destination = Cesium.Cartesian3.fromDegrees(
+        position.lng,
+        position.lat,
+        position.alt + 20000000,
+      );
+    } else {
+      // 列表卫星不再携带经纬度，从渲染器读取实时 ECEF 位置
+      const ecef = satelliteRenderer.value?.getSatellitePosition(satellite.noradId);
+      if (ecef) {
+        const magnitude = Cesium.Cartesian3.magnitude(ecef);
+        destination = Cesium.Cartesian3.normalize(
+          ecef,
+          new Cesium.Cartesian3(),
+        );
+        destination = Cesium.Cartesian3.multiplyByScalar(
+          destination,
+          magnitude + 20000000,
+          destination,
+        );
+      }
     }
 
-    if (isNaN(position.lng) || isNaN(position.lat) || isNaN(position.alt)) {
-      return;
-    }
-
-    const destination = Cesium.Cartesian3.fromDegrees(
-      position.lng,
-      position.lat,
-      position.alt + 20000000,
-    );
+    if (!destination) return;
 
     viewer.value.camera.flyTo({
       destination: destination,
@@ -1618,7 +1697,8 @@ export function useCesium() {
     isInitialized,
     initCesium,
     updateSatellites,
-    updateSatellitePosition,
+    setValidSatelliteIds,
+    updatePositions,
     clearAllSatellites,
     updateOrbit,
     removeOrbit,
