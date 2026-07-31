@@ -31,6 +31,9 @@ const ORBIT_COLORS: Record<string, { color: Cesium.Color; label: string }> = {
   HEO: { color: Cesium.Color.fromCssColorString("#ffaa00"), label: "高轨" },
 };
 
+// 地球平均半径（米），用于从 ECEF 求轨道高度
+const EARTH_RADIUS_M = 6378137;
+
 // 轨道类型判断（基于高度，单位：米）
 function getOrbitType(alt: number): string {
   if (alt < 2000000) return "LEO"; // < 2000 km
@@ -81,6 +84,9 @@ class SatelliteRenderer {
 
   // 轨道类型缓存（避免每次更新都重新计算）
   private orbitTypeCache: Map<string, string> = new Map();
+
+  // 待补色的卫星（首帧 ECEF 未就绪时创建，等首个位置批次到达后一次性补算）
+  private pendingRecolor: Set<string> = new Set();
 
   // 悬停延迟检测
   private hoverDelayFrameCount = 0;
@@ -290,8 +296,13 @@ class SatelliteRenderer {
       if (bufferIdx === undefined) continue;
 
       const initialPosition = this.createInitialPosition(bufferIdx, sat);
-      const orbitType = getOrbitType(sat.position?.alt ?? 0);
+      const altFromEcef = this.ecefAltM(bufferIdx);
+      const orbitType = getOrbitType(altFromEcef ?? sat.position?.alt ?? 0);
       this.orbitTypeCache.set(sat.noradId, orbitType);
+      if (altFromEcef === null) {
+        // ECEF 批次未就绪，等首个位置批次到达后补色
+        this.pendingRecolor.add(sat.noradId);
+      }
       const color = ORBIT_COLORS[orbitType]?.color || this.DEFAULT_COLOR;
 
       const point = this.pointCollection!.add({
@@ -330,9 +341,48 @@ class SatelliteRenderer {
     return new Cesium.Cartesian3(0, 0, 0);
   }
 
+  // 从 ECEF 缓存求卫星轨道高度（米），缓存未就绪返回 null
+  private ecefAltM(bufferIdx: number): number | null {
+    const ecef = this.lastEcef;
+    const base = bufferIdx * 3;
+    if (!ecef || base + 2 >= ecef.length) return null;
+    const x = ecef[base]!;
+    const y = ecef[base + 1]!;
+    const z = ecef[base + 2]!;
+    return Math.sqrt(x * x + y * y + z * z) - EARTH_RADIUS_M;
+  }
+
+  // 解析待补色卫星（首帧 ECEF 就绪后一次性补算轨道类型颜色）
+  private resolvePendingRecolor() {
+    if (this.pendingRecolor.size === 0) return;
+    const indexMap = this.bufferIndexByNoradId;
+    this.pendingRecolor.forEach((noradId) => {
+      const idx = indexMap.get(noradId);
+      if (idx === undefined) {
+        this.pendingRecolor.delete(noradId);
+        return;
+      }
+      const alt = this.ecefAltM(idx);
+      if (alt === null) return; // 仍未就绪，保留待补
+      this.pendingRecolor.delete(noradId);
+      const point = this.pointMap.get(noradId);
+      if (!point) return;
+      const orbitType = getOrbitType(alt);
+      this.orbitTypeCache.set(noradId, orbitType);
+      if (
+        this.colorScheme === "orbit" &&
+        noradId !== this.selectedNoradId &&
+        noradId !== this.hoveredNoradId
+      ) {
+        point.color = ORBIT_COLORS[orbitType]?.color || this.DEFAULT_COLOR;
+      }
+    });
+  }
+
   // 高频位置热路径：直接将 ECEF 批量写入 PointPrimitive（只写坐标，无重建）
   updatePositions(ecef: Float32Array, validMask: Uint8Array) {
     this.lastEcef = ecef;
+    this.resolvePendingRecolor();
     if (this.pointMap.size === 0) return;
 
     const indexMap = this.bufferIndexByNoradId;
@@ -559,6 +609,7 @@ class SatelliteRenderer {
     this.satellitePositions.clear();
     this.lastSatelliteIds.clear();
     this.orbitTypeCache.clear();
+    this.pendingRecolor.clear();
     this.deselectSatellite();
   }
 
@@ -594,6 +645,7 @@ class SatelliteRenderer {
     this.satellitePositions.clear();
     this.lastSatelliteIds.clear();
     this.orbitTypeCache.clear();
+    this.pendingRecolor.clear();
   }
 }
 
