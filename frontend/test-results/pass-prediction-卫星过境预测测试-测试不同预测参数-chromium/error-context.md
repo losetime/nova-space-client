@@ -1209,7 +1209,7 @@
                                     - generic [ref=e2110]: 开始预测
         - contentinfo [ref=e2111]:
             - generic [ref=e2112]:
-                - paragraph [ref=e2113]: © 2026 星瞰. All rights reserved.
+                - paragraph [ref=e2113]: © 2026 星揽. All rights reserved.
                 - generic [ref=e2114]:
                     - link "关于我们" [ref=e2115] [cursor=pointer]:
                         - /url: "#"

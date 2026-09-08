@@ -6,20 +6,13 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # 复制 package 文件
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # 在构建阶段添加
 RUN npm install -g pnpm
 
 # 使用 pnpm 代替 npm
-# --ignore-scripts 先跳过脚本
-RUN pnpm install --frozen-lockfile --ignore-scripts
-
-# 允许所有包的脚本构建，针对pnpm v11版本
-RUN pnpm approve-builds --all
-
-# 重新构建所有被忽略的包
-RUN pnpm rebuild
+RUN pnpm install --frozen-lockfile
 
 # 复制源代码
 COPY . .

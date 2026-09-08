@@ -37,7 +37,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   await app.listen(port);
-  logger.log(`🚀 星瞰 Backend running on: http://localhost:${port}/api`);
+  logger.log(`🚀 星揽 Backend running on: http://localhost:${port}/api`);
 }
 
 void bootstrap();

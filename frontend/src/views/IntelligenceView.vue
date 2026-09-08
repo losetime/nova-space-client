@@ -21,7 +21,7 @@
     <div class="intel-content">
       <!-- 左侧文章列表 -->
       <div class="article-list">
-        <a-spin :spinning="loading">
+        <a-spin :spinning="loading" tip="加载中...">
           <div v-if="intelligenceList.length === 0 && !loading" class="empty-state">
             <p>暂无情报数据</p>
           </div>

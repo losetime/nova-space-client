@@ -1,4 +1,4 @@
-import { ref, onUnmounted, computed } from 'vue'
+import { ref, onUnmounted, computed, watch } from 'vue'
 import { useOrbitWorker } from './useOrbitWorker'
 import { satelliteApi } from '@/api'
 import type { TLEData } from '@/api'
@@ -9,7 +9,7 @@ export interface Satellite {
   position: {
     lng: number | null
     lat: number | null
-    alt: number | null
+    alt: number
   } | null
   status: 'ok' | 'error'
   timestamp: string
@@ -27,8 +27,12 @@ export interface LocalSatellitesState {
   lastUpdate: string | null
 }
 
+const EARTH_RADIUS_M = 6378137
+// 每 ~3s（250ms × 12）更新一次列表高度，用于轨道类型筛选与列表展示
+const ALT_UPDATE_INTERVAL_TICKS = 12
+
 export function useLocalSatellites() {
-  const { metadata, positions, state: workerState, initSatellites, terminate } = useOrbitWorker()
+  const { metadata, positions, ids, validIds, validMask, state: workerState, initSatellites, terminate } = useOrbitWorker()
 
   const state = ref<LocalSatellitesState>({
     status: 'idle',
@@ -39,76 +43,88 @@ export function useLocalSatellites() {
     lastUpdate: null,
   })
 
-  // 卫星对象缓存 - 避免每次更新都创建新对象
-  const satelliteCache = new Map<string, Satellite>()
-  // 记录上次更新时的时间戳，用于检测是否有实际更新
-  let lastUpdateTime = ''
+  // 有效卫星索引（noradId -> ECEF 缓冲索引），与 worker validIds 对齐
+  const validIndexByNoradId = new Map<string, number>()
+  watch(validIds, (list) => {
+    validIndexByNoradId.clear()
+    list.forEach((id, index) => validIndexByNoradId.set(id, index))
+  })
 
+  // 有效卫星集合（用于稳定列表的 status 标记）
+  const validIdSet = computed(() => {
+    const mask = validMask.value
+    const list = validIds.value
+    const set = new Set<string>()
+    for (let i = 0; i < list.length; i++) {
+      if (mask[i] !== 0) set.add(list[i]!)
+    }
+    return set
+  })
+
+  // 稳定的卫星列表：仅在 ids/metadata/validMask 变化时重建（init/refresh 时）
+  let listBuildTime = ''
   const satellites = computed<Satellite[]>(() => {
+    const idsList = ids.value
     const meta = metadata.value
-    const pos = positions.value
-    const currentUpdateTime = workerState.value.lastUpdate || ''
+    if (idsList.length === 0 || Object.keys(meta).length === 0) return []
 
-    if (Object.keys(meta).length === 0 || pos.length === 0) {
-      return []
+    if (!listBuildTime) {
+      listBuildTime = new Date().toISOString()
     }
-
-    // 检查是否有实际更新 - 如果时间戳没变且缓存已存在，直接返回缓存
-    if (currentUpdateTime === lastUpdateTime && satelliteCache.size > 0) {
-      return Array.from(satelliteCache.values())
+    const validSet = validIdSet.value
+    const result: Satellite[] = []
+    for (let i = 0; i < idsList.length; i++) {
+      const id = idsList[i]!
+      const m = meta[id]
+      result.push({
+        noradId: id,
+        name: m?.name || `卫星 ${id}`,
+        position: { lng: null, lat: null, alt: 0 },
+        status: validSet.has(id) ? 'ok' : 'error',
+        timestamp: listBuildTime,
+        countryCode: m?.countryCode,
+        mission: m?.mission,
+        operator: m?.operator,
+      })
     }
+    return result
+  })
 
-    pos.forEach((p) => {
-      const m = meta[p.noradId]
-      const existing = satelliteCache.get(p.noradId)
+  // 节流更新列表高度（从 ECEF 求到地心距离，避免 per-frame 响应式更新）
+  let altUpdateTick = 0
+  const updateSatelliteAlts = (ecef: Float32Array) => {
+    const list = satellites.value
+    if (list.length === 0) return
+    for (let i = 0; i < list.length; i++) {
+      const sat = list[i]!
+      if (sat.status !== 'ok' || !sat.position) continue
+      const idx = validIndexByNoradId.get(sat.noradId)
+      if (idx === undefined) continue
+      const base = idx * 3
+      if (base + 2 >= ecef.length) continue
+      const x = ecef[base]!
+      const y = ecef[base + 1]!
+      const z = ecef[base + 2]!
+      const alt = Math.sqrt(x * x + y * y + z * z) - EARTH_RADIUS_M
+      sat.position.alt = Math.max(0, Math.round(alt))
+    }
+  }
 
-      if (existing) {
-        // 更新现有卫星 - 只修改需要更新的字段，保持对象引用稳定
-        existing.position = p.status === 'ok' ? {
-          lat: p.lat,
-          lng: p.lng,
-          alt: p.alt,
-        } : null
-        existing.status = p.status
-        existing.timestamp = currentUpdateTime || new Date().toISOString()
-
-        // metadata 变化时也更新
-        if (m) {
-          existing.name = m.name || `卫星 ${p.noradId}`
-          existing.countryCode = m.countryCode
-          existing.mission = m.mission
-          existing.operator = m.operator
-        }
-      } else {
-        // 创建新卫星对象
-        const newSat: Satellite = {
-          noradId: p.noradId,
-          name: m?.name || `卫星 ${p.noradId}`,
-          position: p.status === 'ok' ? {
-            lat: p.lat,
-            lng: p.lng,
-            alt: p.alt,
-          } : null,
-          status: p.status,
-          timestamp: currentUpdateTime || new Date().toISOString(),
-          countryCode: m?.countryCode,
-          mission: m?.mission,
-          operator: m?.operator,
-        }
-        satelliteCache.set(p.noradId, newSat)
-      }
-    })
-
-    lastUpdateTime = currentUpdateTime
-    return Array.from(satelliteCache.values())
+  // 位置批次到达：节流更新列表高度（alt）
+  watch(positions, (batch) => {
+    if (!batch || batch.ecef.length === 0) return
+    altUpdateTick++
+    if (altUpdateTick % ALT_UPDATE_INTERVAL_TICKS === 0) {
+      updateSatelliteAlts(batch.ecef)
+    }
   })
 
   const satelliteCount = computed(() => {
-    return positions.value.length
+    return ids.value.length
   })
 
   const errorCount = computed(() => {
-    return positions.value.filter(p => p.status === 'error').length
+    return satellites.value.filter((s) => s.status === 'error').length
   })
 
   const lastUpdate = computed(() => {
@@ -194,8 +210,6 @@ export function useLocalSatellites() {
   }
 
   const refresh = async () => {
-    satelliteCache.clear()
-    lastUpdateTime = ''
     terminate()
     await loadTLEData()
   }
@@ -210,8 +224,7 @@ export function useLocalSatellites() {
 
   const disconnect = () => {
     terminate()
-    satelliteCache.clear()
-    lastUpdateTime = ''
+    listBuildTime = ''
     state.value.status = 'idle'
   }
 
@@ -225,6 +238,10 @@ export function useLocalSatellites() {
     satelliteCount,
     errorCount,
     lastUpdate,
+    positions,
+    ids,
+    validIds,
+    validMask,
     status: computed(() => state.value.status),
     isInitialized: computed(() => workerState.value.isReady),
     loadTLEData,

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-星瞰 is a full-stack aerospace information platform providing satellite visualization (Cesium 3D), space education content, aerospace intelligence, and space weather monitoring. The platform uses Vue 3 (frontend) and NestJS (backend) with PostgreSQL.
+星揽 is a full-stack aerospace information platform providing satellite visualization (Cesium 3D), space education content, aerospace intelligence, and space weather monitoring. The platform uses Vue 3 (frontend) and NestJS (backend) with PostgreSQL.
 
 ## Common Commands
 
