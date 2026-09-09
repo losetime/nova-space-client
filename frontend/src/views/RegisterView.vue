@@ -39,9 +39,31 @@
           </a-form-item>
 
           <a-form-item name="email" label="邮箱">
-            <a-input v-model:value="registerForm.email" placeholder="请输入邮箱" size="large">
+            <a-input
+              v-model:value="registerForm.email"
+              placeholder="请输入邮箱"
+              size="large"
+              :disabled="countdown > 0"
+            >
               <template #prefix>
                 <MailOutlined />
+              </template>
+              <template #suffix>
+                <span v-if="countdown > 0" class="countdown">{{ countdown }}s</span>
+                <a v-else class="resend" :class="{ 'is-disabled': !registerForm.email }" @click="handleSendCode">获取验证码</a>
+              </template>
+            </a-input>
+          </a-form-item>
+
+          <a-form-item name="code" label="邮箱验证码">
+            <a-input
+              v-model:value="registerForm.code"
+              placeholder="请输入6位验证码"
+              size="large"
+              :maxlength="6"
+            >
+              <template #prefix>
+                <SafetyCertificateOutlined />
               </template>
             </a-input>
           </a-form-item>
@@ -89,20 +111,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { message } from "ant-design-vue";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons-vue";
+import { UserOutlined, LockOutlined, MailOutlined, SafetyCertificateOutlined } from "@ant-design/icons-vue";
 import { useUserStore } from "@/stores/user";
+import { authApi } from "@/api";
 
 const router = useRouter();
 const userStore = useUserStore();
 
 const loading = ref(false);
+const sending = ref(false);
+const countdown = ref(0);
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 const registerForm = reactive({
   username: "",
   email: "",
+  code: "",
   password: "",
   confirmPassword: "",
 });
@@ -115,6 +142,10 @@ const registerRules = {
   email: [
     { required: true, message: "请输入邮箱" },
     { type: "email", message: "请输入有效的邮箱地址" },
+  ],
+  code: [
+    { required: true, message: "请输入邮箱验证码" },
+    { len: 6, message: "验证码为6位数字" },
   ],
   password: [
     { required: true, message: "请输入密码" },
@@ -133,6 +164,46 @@ const registerRules = {
   ],
 };
 
+function startCountdown() {
+  countdown.value = 60;
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdown.value -= 1;
+    if (countdown.value <= 0) {
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+  }, 1000);
+}
+
+async function handleSendCode() {
+  if (!registerForm.email) {
+    message.warning("请先输入邮箱");
+    return;
+  }
+  const emailRule = registerRules.email.find((r) => r.type === "email");
+  if (emailRule && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) {
+    message.warning("请输入有效的邮箱地址");
+    return;
+  }
+  sending.value = true;
+  try {
+    const res = await authApi.sendRegisterCode({ email: registerForm.email });
+    if (res.data.code === 0) {
+      message.success(res.data.message || "验证码已发送");
+      startCountdown();
+    } else {
+      message.error(res.data.message || "发送失败，请稍后重试");
+    }
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string | string[] } } };
+    const msg = err.response?.data?.message;
+    message.error(Array.isArray(msg) ? msg[0] : msg || "发送失败，请检查网络后重试");
+  } finally {
+    sending.value = false;
+  }
+}
+
 async function handleRegister() {
   loading.value = true;
   try {
@@ -140,6 +211,7 @@ async function handleRegister() {
       registerForm.username,
       registerForm.email,
       registerForm.password,
+      registerForm.code,
     );
     if (result.success) {
       message.success("注册成功！");
@@ -152,6 +224,10 @@ async function handleRegister() {
     loading.value = false;
   }
 }
+
+onBeforeUnmount(() => {
+  if (countdownTimer) clearInterval(countdownTimer);
+});
 </script>
 
 <style scoped lang="scss">
@@ -443,6 +519,32 @@ async function handleRegister() {
       &:hover {
         text-decoration: underline;
       }
+    }
+  }
+}
+
+.countdown {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.resend {
+  cursor: pointer;
+  color: #00d4ff;
+  font-size: 13px;
+  margin-right: 4px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &.is-disabled {
+    color: rgba(255, 255, 255, 0.25);
+    cursor: not-allowed;
+
+    &:hover {
+      text-decoration: none;
     }
   }
 }

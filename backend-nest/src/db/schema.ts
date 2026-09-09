@@ -142,10 +142,31 @@ export const users = pgTable('users', {
   totalPoints: integer('total_points').notNull().default(0),
   isVerified: boolean('is_verified').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
+  resetPasswordCode: varchar('reset_password_code', { length: 6 }),
+  resetPasswordAttempts: integer('reset_password_attempts')
+    .notNull()
+    .default(0),
+  resetPasswordExpiry: timestamp('reset_password_expiry', {
+    mode: 'date',
+    withTimezone: true,
+  }),
   lastLoginAt: timestamp('last_login_at', { mode: 'date' }),
   lastLoginIp: varchar('last_login_ip', { length: 50 }),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
+export const registrationCodes = pgTable('registration_codes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  code: varchar('code', { length: 6 }).notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  expiresAt: timestamp('expires_at', {
+    mode: 'date',
+    withTimezone: true,
+  }).notNull(),
+  usedAt: timestamp('used_at', { mode: 'date', withTimezone: true }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 });
 
 export const subscriptions = pgTable('subscriptions', {

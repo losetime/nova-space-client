@@ -19,20 +19,72 @@
 
     <div class="auth-right">
       <div class="auth-card">
-        <h2 class="auth-title">登录</h2>
-        <a-form :model="loginForm" :rules="loginRules" layout="vertical" @finish="handleLogin">
-          <a-form-item name="username" label="用户名">
-            <a-input v-model:value="loginForm.username" placeholder="请输入用户名" size="large">
+        <h2 class="auth-title">找回密码</h2>
+
+        <!-- 第一步：输入邮箱发送验证码 -->
+        <a-form
+          v-if="step === 1"
+          :model="emailForm"
+          :rules="emailRules"
+          layout="vertical"
+          @finish="handleSendCode"
+        >
+          <a-form-item name="email" label="邮箱">
+            <a-input v-model:value="emailForm.email" placeholder="请输入注册邮箱" size="large">
               <template #prefix>
-                <UserOutlined />
+                <MailOutlined />
               </template>
             </a-input>
           </a-form-item>
 
-          <a-form-item name="password" label="密码">
+          <a-form-item>
+            <a-button type="primary" html-type="submit" size="large" block :loading="sending">
+              获取验证码
+            </a-button>
+          </a-form-item>
+        </a-form>
+
+        <!-- 第二步：输入验证码 + 新密码 -->
+        <a-form
+          v-else
+          :model="resetForm"
+          :rules="resetRules"
+          layout="vertical"
+          @finish="handleReset"
+        >
+          <a-form-item name="code" label="验证码">
+            <a-input
+              v-model:value="resetForm.code"
+              placeholder="请输入6位验证码"
+              size="large"
+              :maxlength="6"
+            >
+              <template #prefix>
+                <SafetyCertificateOutlined />
+              </template>
+              <template #suffix>
+                <span v-if="countdown > 0" class="countdown">{{ countdown }}s</span>
+                <a v-else class="resend" @click="handleSendCode">重新获取</a>
+              </template>
+            </a-input>
+          </a-form-item>
+
+          <a-form-item name="newPassword" label="新密码">
             <a-input-password
-              v-model:value="loginForm.password"
-              placeholder="请输入密码"
+              v-model:value="resetForm.newPassword"
+              placeholder="请输入新密码（至少6位）"
+              size="large"
+            >
+              <template #prefix>
+                <LockOutlined />
+              </template>
+            </a-input-password>
+          </a-form-item>
+
+          <a-form-item name="confirmPassword" label="确认密码">
+            <a-input-password
+              v-model:value="resetForm.confirmPassword"
+              placeholder="请再次输入新密码"
               size="large"
             >
               <template #prefix>
@@ -42,20 +94,15 @@
           </a-form-item>
 
           <a-form-item>
-            <a-button type="primary" html-type="submit" size="large" block :loading="loading">
-              登录
+            <a-button type="primary" html-type="submit" size="large" block :loading="resetting">
+              重置密码
             </a-button>
           </a-form-item>
-
-          <div class="forgot-password">
-            <a @click="router.push('/forgot-password')">忘记密码？</a>
-          </div>
         </a-form>
 
         <div class="auth-footer">
           <p>
-            还没有账号？
-            <a @click="router.push('/register')">立即注册</a>
+            <a @click="router.push('/login')">返回登录</a>
           </p>
         </div>
       </div>
@@ -64,42 +111,123 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { message } from "ant-design-vue";
-import { UserOutlined, LockOutlined } from "@ant-design/icons-vue";
-import { useUserStore } from "@/stores/user";
+import {
+  LockOutlined,
+  MailOutlined,
+  SafetyCertificateOutlined,
+} from "@ant-design/icons-vue";
+import { authApi } from "@/api";
 
 const router = useRouter();
-const userStore = useUserStore();
 
-const loading = ref(false);
+const step = ref(1);
+const sending = ref(false);
+const resetting = ref(false);
+const countdown = ref(0);
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
-const loginForm = reactive({
-  username: "",
-  password: "",
+const emailForm = reactive({
+  email: "",
 });
 
-const loginRules = {
-  username: [{ required: true, message: "请输入用户名" }],
-  password: [{ required: true, message: "请输入密码" }],
+const emailRules = {
+  email: [
+    { required: true, message: "请输入邮箱" },
+    { type: "email", message: "请输入有效的邮箱地址" },
+  ],
 };
 
-async function handleLogin() {
-  loading.value = true;
-  try {
-    const result = await userStore.login(loginForm.username, loginForm.password);
-    if (result.success) {
-      message.success("登录成功");
-      const redirect = router.currentRoute.value.query.redirect as string;
-      router.push(redirect || "/");
-    } else {
-      message.error(result.message || "登录失败");
+const resetForm = reactive({
+  code: "",
+  newPassword: "",
+  confirmPassword: "",
+});
+
+const resetRules = {
+  code: [
+    { required: true, message: "请输入验证码" },
+    { len: 6, message: "验证码为6位数字" },
+  ],
+  newPassword: [
+    { required: true, message: "请输入新密码" },
+    { min: 6, message: "密码至少6个字符" },
+  ],
+  confirmPassword: [
+    { required: true, message: "请确认新密码" },
+    {
+      validator: (_rule: unknown, value: string) => {
+        if (value !== resetForm.newPassword) {
+          return Promise.reject("两次输入的密码不一致");
+        }
+        return Promise.resolve();
+      },
+    },
+  ],
+};
+
+function startCountdown() {
+  countdown.value = 60;
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdown.value -= 1;
+    if (countdown.value <= 0) {
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = null;
     }
+  }, 1000);
+}
+
+async function handleSendCode() {
+  if (step.value === 1 && !emailForm.email) {
+    message.warning("请输入邮箱");
+    return;
+  }
+  sending.value = true;
+  try {
+    const res = await authApi.forgotPassword({ email: emailForm.email });
+    if (res.data.code === 0) {
+      message.success(res.data.message || "验证码已发送");
+      step.value = 2;
+      startCountdown();
+    } else {
+      message.error(res.data.message || "发送失败，请稍后重试");
+    }
+  } catch {
+    message.error("发送失败，请检查网络后重试");
   } finally {
-    loading.value = false;
+    sending.value = false;
   }
 }
+
+async function handleReset() {
+  resetting.value = true;
+  try {
+    const res = await authApi.resetPassword({
+      email: emailForm.email,
+      code: resetForm.code,
+      newPassword: resetForm.newPassword,
+    });
+    if (res.data.code === 0) {
+      message.success(res.data.message || "密码重置成功");
+      router.push("/login");
+    } else {
+      message.error(res.data.message || "重置失败，请检查验证码");
+    }
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string | string[] } } };
+    const msg = err.response?.data?.message;
+    message.error(Array.isArray(msg) ? msg[0] : msg || "重置失败，请检查验证码");
+  } finally {
+    resetting.value = false;
+  }
+}
+
+onBeforeUnmount(() => {
+  if (countdownTimer) clearInterval(countdownTimer);
+});
 </script>
 
 <style scoped lang="scss">
@@ -395,19 +523,20 @@ async function handleLogin() {
   }
 }
 
-.forgot-password {
-  text-align: right;
-  margin-top: -8px;
-  margin-bottom: 4px;
+.countdown {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  margin-right: 8px;
+}
 
-  a {
-    cursor: pointer;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
+.resend {
+  cursor: pointer;
+  color: #00d4ff;
+  font-size: 13px;
+  margin-right: 4px;
 
-    &:hover {
-      color: #00d4ff;
-    }
+  &:hover {
+    text-decoration: underline;
   }
 }
 

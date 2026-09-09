@@ -128,13 +128,22 @@ api.interceptors.response.use(
 
 // 认证 API
 export const authApi = {
-  register: (data: { username: string; email: string; password: string }) =>
+  register: (data: { username: string; email: string; password: string; code: string }) =>
     api.post<ApiResponse<LoginResponse>>('/auth/register', data),
+
+  sendRegisterCode: (data: { email: string }) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/send-register-code', data),
 
   login: (data: { username: string; password: string }) =>
     api.post<ApiResponse<LoginResponse>>('/auth/login', data),
 
   profile: () => api.get<ApiResponse<User>>('/auth/profile'),
+
+  forgotPassword: (data: { email: string }) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/forgot-password', data),
+
+  resetPassword: (data: { email: string; code: string; newPassword: string }) =>
+    api.post<ApiResponse<{ message: string }>>('/auth/reset-password', data),
 
   refresh: (refreshToken: string) =>
     api.post<ApiResponse<{ accessToken: string; refreshToken: string }>>('/auth/refresh', {

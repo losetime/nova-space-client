@@ -49,10 +49,10 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 注册
-  async function register(username: string, email: string, password: string) {
+  async function register(username: string, email: string, password: string, code: string) {
     loading.value = true
     try {
-      const response = await authApi.register({ username, email, password })
+      const response = await authApi.register({ username, email, password, code })
       const data = response.data.data
       const userData = data.user
       const accessToken = data.accessToken ?? data.token

@@ -25,12 +25,23 @@ export class RegisterDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(6)
+  @MaxLength(6)
+  code?: string;
+
+  @IsOptional()
+  @IsString()
   phone?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(30)
   nickname?: string;
+}
+
+export class SendRegisterCodeDto {
+  @IsEmail()
+  email: string;
 }
 
 export class LoginDto {
@@ -66,6 +77,26 @@ export class ChangePasswordDto {
 
   @IsString()
   @MinLength(6)
+  newPassword: string;
+}
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(6)
+  code: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(50)
   newPassword: string;
 }
 

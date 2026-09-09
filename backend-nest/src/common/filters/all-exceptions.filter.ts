@@ -93,7 +93,10 @@ function detectDatabaseError(exception: unknown): DatabaseError | null {
   ) {
     return DATABASE_ERRORS[4];
   }
-  if (errorMessage.includes('query timeout') || errorMessage.includes('canceling statement')) {
+  if (
+    errorMessage.includes('query timeout') ||
+    errorMessage.includes('canceling statement')
+  ) {
     return DATABASE_ERRORS[6];
   }
   if (
@@ -112,19 +115,29 @@ function detectDatabaseError(exception: unknown): DatabaseError | null {
   return null;
 }
 
-function getFriendlyMessage(exception: unknown): { message: string; detail?: string } {
+function getFriendlyMessage(exception: unknown): {
+  message: string;
+  detail?: string;
+} {
   const dbError = detectDatabaseError(exception);
   if (dbError) {
     return {
       message: dbError.message,
-      detail: process.env.NODE_ENV !== 'production' ? (exception as Error).message : undefined,
+      detail:
+        process.env.NODE_ENV !== 'production'
+          ? (exception as Error).message
+          : undefined,
     };
   }
 
   if (exception instanceof Error) {
     return {
-      message: process.env.NODE_ENV !== 'production' ? exception.message : '服务器内部错误',
-      detail: process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
+      message:
+        process.env.NODE_ENV !== 'production'
+          ? exception.message
+          : '服务器内部错误',
+      detail:
+        process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
     };
   }
 
@@ -150,7 +163,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object') {
         const res = exceptionResponse as ExceptionResponseObject;
-        message = Array.isArray(res.message) ? res.message[0] : res.message || message;
+        message = Array.isArray(res.message)
+          ? res.message[0]
+          : res.message || message;
         code = res.code || -1;
       }
     } else {

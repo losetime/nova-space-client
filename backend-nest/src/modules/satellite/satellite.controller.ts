@@ -417,7 +417,9 @@ export class SatelliteController {
       1440,
     );
     const start = startTime ? new Date(startTime) : new Date();
-    const actualIntervalSeconds = intervalSeconds ? parseInt(intervalSeconds) : undefined;
+    const actualIntervalSeconds = intervalSeconds
+      ? parseInt(intervalSeconds)
+      : undefined;
 
     // 验证时间
     if (isNaN(start.getTime())) {

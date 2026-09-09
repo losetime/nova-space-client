@@ -184,7 +184,7 @@ async function initSatellites(tles: TLEData[]) {
     satIndexMap.set(id, index);
   });
 
-  let initialValidMask = new Uint8Array(satrecs.length);
+  const initialValidMask = new Uint8Array(satrecs.length);
   try {
     const runtime = await createSingleThreadRuntime();
     propagator = new BulkPropagator({

@@ -43,6 +43,30 @@ export class AuthService {
     return this.userService.findById(userId);
   }
 
+  async generateRegisterCode(email: string): Promise<string> {
+    return this.userService.generateRegisterCode(email);
+  }
+
+  async getValidRegisterCode(email: string): Promise<string | null> {
+    return this.userService.getValidRegisterCode(email);
+  }
+
+  async findByEmail(email: string): Promise<schema.User | null> {
+    return this.userService.findByEmail(email);
+  }
+
+  async generateResetCode(email: string): Promise<string | null> {
+    return this.userService.generateResetCode(email);
+  }
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    return this.userService.resetPassword(email, code, newPassword);
+  }
+
   private generateToken(user: schema.User): string {
     const payload = {
       sub: user.id,

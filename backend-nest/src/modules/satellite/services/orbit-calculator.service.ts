@@ -196,7 +196,9 @@ export class OrbitCalculatorService implements OnModuleInit {
     let intervalMs: number;
 
     if (intervalSeconds !== undefined) {
-      actualSteps = Math.floor((durationMinutes * 60 * 1000) / (intervalSeconds * 1000));
+      actualSteps = Math.floor(
+        (durationMinutes * 60 * 1000) / (intervalSeconds * 1000),
+      );
       intervalMs = intervalSeconds * 1000;
     } else {
       actualSteps = steps;

@@ -17,6 +17,11 @@ services:
       - JWT_EXPIRES_IN=7d
       - PORT=3001
       - FRONTEND_URL=https://space.nuoweibd.com
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
     networks:
       - nova-network
     extra_hosts:

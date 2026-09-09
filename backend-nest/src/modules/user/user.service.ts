@@ -10,6 +10,7 @@ import type { DrizzleClient } from '../../db';
 import * as schema from '../../db/schema';
 import { eq, or, sql, desc } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'node:crypto';
 import { UserRole, UserLevel } from '../../common/enums/user.enum';
 import {
   RegisterDto,
@@ -23,7 +24,15 @@ export class UserService {
   constructor(@Inject(DRIZZLE) private db: DrizzleClient) {}
 
   async create(registerDto: RegisterDto): Promise<schema.User> {
-    const { username, password, email, phone, nickname } = registerDto;
+    const { username, password, email, phone, nickname, code } = registerDto;
+
+    // 提供邮箱时，必须通过邮箱验证码
+    if (email) {
+      const verified = await this.verifyRegisterCode(email, code);
+      if (!verified) {
+        throw new BadRequestException('邮箱验证码无效或已过期');
+      }
+    }
 
     const conditions = [eq(schema.users.username, username)];
     if (email) conditions.push(eq(schema.users.email, email));
@@ -73,6 +82,169 @@ export class UserService {
       .from(schema.users)
       .where(eq(schema.users.username, username));
     return user || null;
+  }
+
+  async findByEmail(email: string): Promise<schema.User | null> {
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email));
+    return user || null;
+  }
+
+  async getValidRegisterCode(email: string): Promise<string | null> {
+    const [record] = await this.db
+      .select()
+      .from(schema.registrationCodes)
+      .where(eq(schema.registrationCodes.email, email));
+
+    if (
+      !record ||
+      record.usedAt != null ||
+      record.expiresAt.getTime() < Date.now() ||
+      record.expiresAt.getTime() - Date.now() <= 4 * 60 * 1000
+    ) {
+      return null;
+    }
+
+    return record.code;
+  }
+
+  async generateRegisterCode(email: string): Promise<string> {
+    const existingUser = await this.findByEmail(email);
+    if (existingUser) {
+      throw new ConflictException('该邮箱已被注册');
+    }
+
+    const code = randomInt(0, 1000000).toString().padStart(6, '0');
+
+    const [existingCode] = await this.db
+      .select()
+      .from(schema.registrationCodes)
+      .where(eq(schema.registrationCodes.email, email));
+
+    if (existingCode) {
+      await this.db
+        .update(schema.registrationCodes)
+        .set({
+          code,
+          attempts: 0,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+          usedAt: null,
+        })
+        .where(eq(schema.registrationCodes.email, email));
+    } else {
+      await this.db.insert(schema.registrationCodes).values({
+        email,
+        code,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      });
+    }
+
+    return code;
+  }
+
+  async verifyRegisterCode(email: string, code?: string): Promise<boolean> {
+    if (!code) {
+      return false;
+    }
+
+    const [record] = await this.db
+      .select()
+      .from(schema.registrationCodes)
+      .where(eq(schema.registrationCodes.email, email));
+
+    if (
+      !record ||
+      record.usedAt != null ||
+      record.expiresAt.getTime() < Date.now()
+    ) {
+      return false;
+    }
+    if (record.attempts >= 5) {
+      return false;
+    }
+    if (record.code !== code) {
+      await this.db
+        .update(schema.registrationCodes)
+        .set({ attempts: record.attempts + 1 })
+        .where(eq(schema.registrationCodes.email, email));
+      return false;
+    }
+
+    await this.db
+      .update(schema.registrationCodes)
+      .set({ usedAt: new Date() })
+      .where(eq(schema.registrationCodes.email, email));
+
+    return true;
+  }
+
+  async generateResetCode(email: string): Promise<string | null> {
+    const user = await this.findByEmail(email);
+    if (!user) {
+      return null;
+    }
+
+    const code = randomInt(0, 1000000).toString().padStart(6, '0');
+    await this.db
+      .update(schema.users)
+      .set({
+        resetPasswordCode: code,
+        resetPasswordAttempts: 0,
+        resetPasswordExpiry: new Date(Date.now() + 5 * 60 * 1000),
+      })
+      .where(eq(schema.users.id, user.id));
+
+    return code;
+  }
+
+  async verifyResetCode(
+    email: string,
+    code: string,
+  ): Promise<schema.User | null> {
+    const user = await this.findByEmail(email);
+    if (!user || !user.resetPasswordCode || !user.resetPasswordExpiry) {
+      return null;
+    }
+    if (user.resetPasswordExpiry.getTime() < Date.now()) {
+      return null;
+    }
+    if (user.resetPasswordAttempts >= 5) {
+      return null;
+    }
+    if (user.resetPasswordCode !== code) {
+      await this.db
+        .update(schema.users)
+        .set({ resetPasswordAttempts: user.resetPasswordAttempts + 1 })
+        .where(eq(schema.users.id, user.id));
+      return null;
+    }
+    return user;
+  }
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    const user = await this.verifyResetCode(email, code);
+    if (!user) {
+      return false;
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.db
+      .update(schema.users)
+      .set({
+        password: hashedPassword,
+        resetPasswordCode: null,
+        resetPasswordAttempts: 0,
+        resetPasswordExpiry: null,
+      })
+      .where(eq(schema.users.id, user.id));
+
+    return true;
   }
 
   async findById(id: string): Promise<schema.User | null> {
