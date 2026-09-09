@@ -36,7 +36,7 @@
           <!-- 未登录状态 -->
           <template v-if="!userStore.isLoggedIn">
             <a-button type="link" class="login-btn" @click="router.push('/login')"> 登录 </a-button>
-            <a-button type="primary" class="register-btn" @click="router.push('/login')">
+            <a-button type="primary" class="register-btn" @click="router.push('/register')">
               注册
             </a-button>
           </template>

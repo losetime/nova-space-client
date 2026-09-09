@@ -52,8 +52,9 @@
         >
           <div class="card-cover">
             <img
-              :src="getCoverUrl(item.cover)"
+              v-lazy="getCoverUrl(item.cover)"
               :alt="item.title"
+              src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
               @error="handleImageError"
             />
             <div class="card-type">{{ item.type === "video" ? "视频" : "图文" }}</div>
@@ -187,6 +188,35 @@ const DEFAULT_COVER =
 // 获取封面 URL
 const getCoverUrl = (cover?: string) => {
   return getFullImageUrl(cover) || DEFAULT_COVER;
+};
+
+// 懒加载指令：仅当图片接近视口时才加载真实地址（比 loading="lazy" 更严格）
+const vLazy = {
+  mounted(el: HTMLImageElement, binding: { value: string }) {
+    const url = binding.value;
+    if (!url) return;
+    if (!("IntersectionObserver" in window)) {
+      el.src = url;
+      return;
+    }
+    if (el.dataset.observed) return;
+    el.dataset.observed = "1";
+    const io = new IntersectionObserver(
+      (entries, obs) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          el.src = url;
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "300px 0px" }
+    );
+    io.observe(el);
+  },
+  updated(el: HTMLImageElement, binding: { value: string; oldValue?: string }) {
+    if (binding.oldValue !== binding.value) {
+      el.src = binding.value;
+    }
+  },
 };
 
 const activeCategory = ref("all");
@@ -437,6 +467,7 @@ onMounted(() => {
     position: relative;
     height: 250px;
     overflow: hidden;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(0, 212, 255, 0.06) 100%);
 
     img {
       width: 100%;

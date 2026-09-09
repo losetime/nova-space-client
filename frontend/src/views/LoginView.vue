@@ -19,100 +19,41 @@
 
     <div class="auth-right">
       <div class="auth-card">
-        <a-tabs v-model:activeKey="activeTab" centered>
-          <a-tab-pane key="login" tab="登录">
-            <a-form :model="loginForm" :rules="loginRules" layout="vertical" @finish="handleLogin">
-              <a-form-item name="username" label="用户名">
-                <a-input v-model:value="loginForm.username" placeholder="请输入用户名" size="large">
-                  <template #prefix>
-                    <UserOutlined />
-                  </template>
-                </a-input>
-              </a-form-item>
+        <h2 class="auth-title">登录</h2>
+        <a-form :model="loginForm" :rules="loginRules" layout="vertical" @finish="handleLogin">
+          <a-form-item name="username" label="用户名">
+            <a-input v-model:value="loginForm.username" placeholder="请输入用户名" size="large">
+              <template #prefix>
+                <UserOutlined />
+              </template>
+            </a-input>
+          </a-form-item>
 
-              <a-form-item name="password" label="密码">
-                <a-input-password
-                  v-model:value="loginForm.password"
-                  placeholder="请输入密码"
-                  size="large"
-                >
-                  <template #prefix>
-                    <LockOutlined />
-                  </template>
-                </a-input-password>
-              </a-form-item>
-
-              <a-form-item>
-                <a-button type="primary" html-type="submit" size="large" block :loading="loading">
-                  登录
-                </a-button>
-              </a-form-item>
-            </a-form>
-          </a-tab-pane>
-
-          <a-tab-pane key="register" tab="注册">
-            <a-form
-              :model="registerForm"
-              :rules="registerRules"
-              layout="vertical"
-              @finish="handleRegister"
+          <a-form-item name="password" label="密码">
+            <a-input-password
+              v-model:value="loginForm.password"
+              placeholder="请输入密码"
+              size="large"
             >
-              <a-form-item name="username" label="用户名">
-                <a-input
-                  v-model:value="registerForm.username"
-                  placeholder="请输入用户名"
-                  size="large"
-                >
-                  <template #prefix>
-                    <UserOutlined />
-                  </template>
-                </a-input>
-              </a-form-item>
+              <template #prefix>
+                <LockOutlined />
+              </template>
+            </a-input-password>
+          </a-form-item>
 
-              <a-form-item name="email" label="邮箱">
-                <a-input v-model:value="registerForm.email" placeholder="请输入邮箱" size="large">
-                  <template #prefix>
-                    <MailOutlined />
-                  </template>
-                </a-input>
-              </a-form-item>
+          <a-form-item>
+            <a-button type="primary" html-type="submit" size="large" block :loading="loading">
+              登录
+            </a-button>
+          </a-form-item>
+        </a-form>
 
-              <a-form-item name="password" label="密码">
-                <a-input-password
-                  v-model:value="registerForm.password"
-                  placeholder="请输入密码（至少6位）"
-                  size="large"
-                >
-                  <template #prefix>
-                    <LockOutlined />
-                  </template>
-                </a-input-password>
-              </a-form-item>
-
-              <a-form-item name="confirmPassword" label="确认密码">
-                <a-input-password
-                  v-model:value="registerForm.confirmPassword"
-                  placeholder="请再次输入密码"
-                  size="large"
-                >
-                  <template #prefix>
-                    <LockOutlined />
-                  </template>
-                </a-input-password>
-              </a-form-item>
-
-              <a-form-item>
-                <a-button type="primary" html-type="submit" size="large" block :loading="loading">
-                  注册
-                </a-button>
-              </a-form-item>
-            </a-form>
-          </a-tab-pane>
-        </a-tabs>
-
-        <!-- <div class="auth-footer">
-          <p>注册即表示同意 <a href="#">服务条款</a> 和 <a href="#">隐私政策</a></p>
-        </div> -->
+        <div class="auth-footer">
+          <p>
+            还没有账号？
+            <a @click="router.push('/register')">立即注册</a>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -122,13 +63,12 @@
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { message } from "ant-design-vue";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons-vue";
+import { UserOutlined, LockOutlined } from "@ant-design/icons-vue";
 import { useUserStore } from "@/stores/user";
 
 const router = useRouter();
 const userStore = useUserStore();
 
-const activeTab = ref("login");
 const loading = ref(false);
 
 const loginForm = reactive({
@@ -136,42 +76,9 @@ const loginForm = reactive({
   password: "",
 });
 
-const registerForm = reactive({
-  username: "",
-  email: "",
-  password: "",
-  confirmPassword: "",
-});
-
 const loginRules = {
   username: [{ required: true, message: "请输入用户名" }],
   password: [{ required: true, message: "请输入密码" }],
-};
-
-const registerRules = {
-  username: [
-    { required: true, message: "请输入用户名" },
-    { min: 3, max: 20, message: "用户名长度为3-20个字符" },
-  ],
-  email: [
-    { required: true, message: "请输入邮箱" },
-    { type: "email", message: "请输入有效的邮箱地址" },
-  ],
-  password: [
-    { required: true, message: "请输入密码" },
-    { min: 6, message: "密码至少6个字符" },
-  ],
-  confirmPassword: [
-    { required: true, message: "请确认密码" },
-    {
-      validator: (_rule: unknown, value: string) => {
-        if (value !== registerForm.password) {
-          return Promise.reject("两次输入的密码不一致");
-        }
-        return Promise.resolve();
-      },
-    },
-  ],
 };
 
 async function handleLogin() {
@@ -184,26 +91,6 @@ async function handleLogin() {
       router.push(redirect || "/");
     } else {
       message.error(result.message || "登录失败");
-    }
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function handleRegister() {
-  loading.value = true;
-  try {
-    const result = await userStore.register(
-      registerForm.username,
-      registerForm.email,
-      registerForm.password,
-    );
-    if (result.success) {
-      message.success("注册成功！");
-      const redirect = router.currentRoute.value.query.redirect as string;
-      router.push(redirect || "/");
-    } else {
-      message.error(result.message || "注册失败");
     }
   } finally {
     loading.value = false;
@@ -415,38 +302,16 @@ async function handleRegister() {
   width: 100%;
   max-width: 400px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(0, 212, 255, 0.2);
   border-radius: 16px;
   padding: 32px;
   backdrop-filter: blur(10px);
 
-  :deep(.ant-tabs) {
-    .ant-tabs-nav {
-      margin-bottom: 24px;
-
-      &::before {
-        border-bottom-color: rgba(255, 255, 255, 0.1);
-      }
-    }
-
-    .ant-tabs-tab {
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 16px;
-
-      &:hover {
-        color: #00d4ff;
-      }
-
-      &.ant-tabs-tab-active {
-        .ant-tabs-tab-btn {
-          color: #00d4ff;
-        }
-      }
-    }
-
-    .ant-tabs-ink-bar {
-      background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
-    }
+  .auth-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 32px;
   }
 
   :deep(.ant-form) {
@@ -512,10 +377,11 @@ async function handleRegister() {
   margin-top: 24px;
 
   p {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
 
     a {
+      cursor: pointer;
       color: #00d4ff;
 
       &:hover {
