@@ -21,8 +21,13 @@
     <div class="intel-content">
       <!-- 左侧文章列表 -->
       <div class="article-list">
-        <a-spin :spinning="loading" tip="加载中...">
-          <div v-if="intelligenceList.length === 0 && !loading" class="empty-state">
+        <a-spin
+          v-if="loading && intelligenceList.length === 0"
+          class="list-loading"
+        />
+
+        <template v-else>
+          <div v-if="intelligenceList.length === 0" class="empty-state">
             <p>暂无情报数据</p>
           </div>
 
@@ -53,16 +58,23 @@
               <a-button type="primary" ghost> 阅读全文 </a-button>
             </div>
           </div>
-        </a-spin>
 
-        <!-- 分页 -->
-        <div class="pagination-wrapper" v-if="total > pageSize">
-          <a-pagination
-            v-model:current="currentPage"
-            :total="total"
-            :pageSize="pageSize"
-            @change="handlePageChange"
-          />
+          <!-- 分页 -->
+          <div class="pagination-wrapper" v-if="total > pageSize">
+            <a-pagination
+              v-model:current="currentPage"
+              :total="total"
+              :page-size="pageSize"
+              :page-size-options="pageSizeOptions"
+              show-size-changer
+              @change="handlePageChange"
+            />
+          </div>
+        </template>
+
+        <!-- 换页加载遮罩：保留原列表防止内容闪烁/跳动 -->
+        <div v-if="loading && intelligenceList.length > 0" class="list-overlay">
+          <a-spin />
         </div>
       </div>
 
@@ -105,7 +117,8 @@ import { intelligenceApi, subscriptionApi, type Intelligence } from "@/api";
 const router = useRouter();
 const activeTab = ref("all");
 const currentPage = ref(1);
-const pageSize = ref(12);
+const pageSize = ref(10);
+const pageSizeOptions = ref(['5', '10', '20', '50', '100']);
 const total = ref(0);
 const loading = ref(false);
 const hotLoading = ref(false);
@@ -184,8 +197,12 @@ const handleTabChange = () => {
   fetchIntelligenceList();
 };
 
-const handlePageChange = (page: number) => {
+const handlePageChange = (page: number, size: number) => {
   currentPage.value = page;
+  if (size !== pageSize.value) {
+    pageSize.value = size;
+    currentPage.value = 1;
+  }
   fetchIntelligenceList();
 };
 
@@ -289,6 +306,27 @@ onMounted(() => {
 }
 
 .article-list {
+  position: relative;
+  min-height: 400px;
+
+  :deep(.list-loading) {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .list-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgba(10, 10, 15, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+  }
+
   .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -476,6 +514,8 @@ onMounted(() => {
 }
 
 .rank-list {
+  min-height: 260px;
+
   .rank-item {
     display: flex;
     align-items: center;

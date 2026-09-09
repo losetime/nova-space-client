@@ -1,11 +1,12 @@
 <template>
-  <a-config-provider :theme="darkTheme">
+  <a-config-provider :locale="zhCN" :theme="darkTheme">
     <router-view />
   </a-config-provider>
 </template>
 
 <script setup lang="ts">
 import { theme } from 'ant-design-vue'
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
 
 const darkTheme = {
   algorithm: theme.darkAlgorithm,
