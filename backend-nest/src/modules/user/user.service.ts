@@ -34,7 +34,16 @@ export class UserService {
       }
     }
 
-    const conditions = [eq(schema.users.username, username)];
+    // 未提供用户名时，由邮箱前缀自动生成（冲突时追加数字后缀）
+    let resolvedUsername = username;
+    if (!resolvedUsername) {
+      if (!email) {
+        throw new BadRequestException('用户名或邮箱不能为空');
+      }
+      resolvedUsername = await this.generateUsername(email);
+    }
+
+    const conditions = [eq(schema.users.username, resolvedUsername)];
     if (email) conditions.push(eq(schema.users.email, email));
     if (phone) conditions.push(eq(schema.users.phone, phone));
 
@@ -45,7 +54,7 @@ export class UserService {
 
     if (existingUsers.length > 0) {
       const existingUser = existingUsers[0];
-      if (existingUser.username === username) {
+      if (existingUser.username === resolvedUsername) {
         throw new ConflictException('用户名已存在');
       }
       if (email && existingUser.email === email) {
@@ -61,11 +70,11 @@ export class UserService {
     const [user] = await this.db
       .insert(schema.users)
       .values({
-        username,
+        username: resolvedUsername,
         password: hashedPassword,
         email,
         phone,
-        nickname: nickname || username,
+        nickname: nickname || resolvedUsername,
         role: UserRole.USER,
         level: UserLevel.BASIC,
         points: 100,
@@ -74,6 +83,20 @@ export class UserService {
       .returning();
 
     return user;
+  }
+
+  private async generateUsername(email: string): Promise<string> {
+    const base = (email.split('@')[0] || '').slice(0, 30) || 'user';
+    let candidate = base;
+    let n = 1;
+    for (;;) {
+      const [existing] = await this.db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.username, candidate));
+      if (!existing) return candidate;
+      candidate = `${base}${n++}`;
+    }
   }
 
   async findByUsername(username: string): Promise<schema.User | null> {
@@ -275,13 +298,13 @@ export class UserService {
   }
 
   async validateUser(
-    username: string,
+    email: string,
     password: string,
   ): Promise<schema.User | null> {
     const [user] = await this.db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.username, username));
+      .where(eq(schema.users.email, email));
 
     if (!user) {
       return null;

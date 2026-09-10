@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { UploadModule } from './modules/upload/upload.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { PointsModule } from './modules/points/points.module';
 import { SatelliteModule } from './modules/satellite/satellite.module';
@@ -34,6 +35,7 @@ import appConfig from './config/app.config';
     DrizzleModule,
     UserModule,
     AuthModule,
+    UploadModule,
     SubscriptionModule,
     PointsModule,
     SatelliteModule,

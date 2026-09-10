@@ -45,9 +45,7 @@
           <template v-else>
             <a-dropdown :trigger="['click']">
               <div class="user-wrapper">
-                <div class="user-avatar">
-                  <span>{{ userStore.user?.username?.charAt(0).toUpperCase() || "U" }}</span>
-                </div>
+                <UserAvatar :user="userStore.user" :size="36" />
                 <div class="user-info">
                   <span class="user-name">{{
                     userStore.user?.nickname || userStore.user?.username
@@ -156,6 +154,7 @@ import { useRoute, useRouter } from "vue-router";
 import { message } from "ant-design-vue";
 import { useUserStore } from "@/stores/user";
 import NotificationIcon from "@/components/NotificationIcon.vue";
+import UserAvatar from "@/components/UserAvatar.vue";
 import {
   UserOutlined,
   GlobalOutlined,
@@ -165,9 +164,7 @@ import {
   DownOutlined,
   LogoutOutlined,
   CommentOutlined,
-  ThunderboltOutlined,
   BellOutlined,
-  RocketOutlined,
   CrownOutlined,
   MenuOutlined,
 } from "@ant-design/icons-vue";
@@ -408,20 +405,6 @@ function getLevelText(level?: string) {
     &:hover {
       background: rgba(0, 212, 255, 0.08);
       border-color: rgba(0, 212, 255, 0.2);
-    }
-
-    .user-avatar {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 14px;
-      color: #fff;
-      box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
     }
 
     .user-info {

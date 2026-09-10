@@ -21,10 +21,10 @@
       <div class="auth-card">
         <h2 class="auth-title">登录</h2>
         <a-form :model="loginForm" :rules="loginRules" layout="vertical" @finish="handleLogin">
-          <a-form-item name="username" label="用户名">
-            <a-input v-model:value="loginForm.username" placeholder="请输入用户名" size="large">
+          <a-form-item name="email" label="邮箱">
+            <a-input v-model:value="loginForm.email" placeholder="请输入邮箱" size="large">
               <template #prefix>
-                <UserOutlined />
+                <MailOutlined />
               </template>
             </a-input>
           </a-form-item>
@@ -67,7 +67,7 @@
 import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import { message } from "ant-design-vue";
-import { UserOutlined, LockOutlined } from "@ant-design/icons-vue";
+import { MailOutlined, LockOutlined } from "@ant-design/icons-vue";
 import { useUserStore } from "@/stores/user";
 
 const router = useRouter();
@@ -76,19 +76,22 @@ const userStore = useUserStore();
 const loading = ref(false);
 
 const loginForm = reactive({
-  username: "",
+  email: "",
   password: "",
 });
 
 const loginRules = {
-  username: [{ required: true, message: "请输入用户名" }],
+  email: [
+    { required: true, message: "请输入邮箱" },
+    { type: "email", message: "请输入有效的邮箱地址" },
+  ],
   password: [{ required: true, message: "请输入密码" }],
 };
 
 async function handleLogin() {
   loading.value = true;
   try {
-    const result = await userStore.login(loginForm.username, loginForm.password);
+    const result = await userStore.login(loginForm.email, loginForm.password);
     if (result.success) {
       message.success("登录成功");
       const redirect = router.currentRoute.value.query.redirect as string;

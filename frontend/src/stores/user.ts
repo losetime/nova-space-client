@@ -15,10 +15,10 @@ export const useUserStore = defineStore('user', () => {
   const isVip = computed(() => user.value?.level === 'advanced' || user.value?.level === 'professional')
 
   // 登录
-  async function login(username: string, password: string) {
+  async function login(email: string, password: string) {
     loading.value = true
     try {
-      const response = await authApi.login({ username, password })
+      const response = await authApi.login({ email, password })
       const data = response.data.data
       const userData = data.user
       const accessToken = data.accessToken ?? data.token
@@ -49,10 +49,10 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 注册
-  async function register(username: string, email: string, password: string, code: string) {
+  async function register(email: string, password: string, code: string) {
     loading.value = true
     try {
-      const response = await authApi.register({ username, email, password, code })
+      const response = await authApi.register({ email, password, code })
       const data = response.data.data
       const userData = data.user
       const accessToken = data.accessToken ?? data.token

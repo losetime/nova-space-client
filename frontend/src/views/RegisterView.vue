@@ -26,18 +26,6 @@
           layout="vertical"
           @finish="handleRegister"
         >
-          <a-form-item name="username" label="用户名">
-            <a-input
-              v-model:value="registerForm.username"
-              placeholder="请输入用户名"
-              size="large"
-            >
-              <template #prefix>
-                <UserOutlined />
-              </template>
-            </a-input>
-          </a-form-item>
-
           <a-form-item name="email" label="邮箱">
             <a-input
               v-model:value="registerForm.email"
@@ -114,7 +102,7 @@
 import { ref, reactive, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { message } from "ant-design-vue";
-import { UserOutlined, LockOutlined, MailOutlined, SafetyCertificateOutlined } from "@ant-design/icons-vue";
+import { LockOutlined, MailOutlined, SafetyCertificateOutlined } from "@ant-design/icons-vue";
 import { useUserStore } from "@/stores/user";
 import { authApi } from "@/api";
 
@@ -127,7 +115,6 @@ const countdown = ref(0);
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 const registerForm = reactive({
-  username: "",
   email: "",
   code: "",
   password: "",
@@ -135,10 +122,6 @@ const registerForm = reactive({
 });
 
 const registerRules = {
-  username: [
-    { required: true, message: "请输入用户名" },
-    { min: 3, max: 20, message: "用户名长度为3-20个字符" },
-  ],
   email: [
     { required: true, message: "请输入邮箱" },
     { type: "email", message: "请输入有效的邮箱地址" },
@@ -208,7 +191,6 @@ async function handleRegister() {
   loading.value = true;
   try {
     const result = await userStore.register(
-      registerForm.username,
       registerForm.email,
       registerForm.password,
       registerForm.code,

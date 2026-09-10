@@ -9,9 +9,14 @@ import {
   UseGuards,
   Request,
   Inject,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
 import { PointsService } from '../points/points.service';
+import { UploadService } from '../upload/upload.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -24,6 +29,7 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     @Inject(PointsService) private readonly pointsService: PointsService,
+    private readonly uploadService: UploadService,
   ) {}
 
   // 获取当前用户信息
@@ -37,7 +43,7 @@ export class UserController {
     const todayCheckedIn = await this.pointsService.isCheckedInToday(
       req.user.id,
     );
-    const { password, ...result } = user;
+    const { password: _password, ...result } = user;
     return { code: 0, data: { ...result, todayCheckedIn } };
   }
 
@@ -49,7 +55,7 @@ export class UserController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     const user = await this.userService.update(req.user.id, updateUserDto);
-    const { password, ...result } = user as any;
+    const { password: _password, ...result } = user;
     return { code: 0, data: result, message: '更新成功' };
   }
 
@@ -62,6 +68,22 @@ export class UserController {
   ) {
     await this.userService.changePassword(req.user.id, changePasswordDto);
     return { code: 0, message: '密码修改成功' };
+  }
+
+  // 上传头像
+  @Put('avatar')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAvatar(
+    @Request() req: RequestWithUser,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('请上传图片文件');
+    }
+    const { url } = await this.uploadService.uploadImage(file, 'avatars');
+    await this.userService.update(req.user.id, { avatar: url });
+    return { code: 0, data: { url }, message: '头像更新成功' };
   }
 
   // 管理员：获取用户列表
@@ -82,7 +104,7 @@ export class UserController {
     @Body() adminUpdateDto: AdminUpdateUserDto,
   ) {
     const user = await this.userService.adminUpdate(id, adminUpdateDto);
-    const { password, ...result } = user as any;
+    const { password: _password, ...result } = user;
     return { code: 0, data: result, message: '更新成功' };
   }
 

@@ -31,4 +31,13 @@ export default registerAs('app', () => ({
     apiToken: process.env.ESA_DISCOS_API_TOKEN || '',
     baseUrl: 'https://discosweb.esoc.esa.int/api',
   },
+  minio: {
+    endpoint: process.env.MINIO_ENDPOINT || 'localhost',
+    port: parseInt(process.env.MINIO_PORT || '9000', 10) || 9000,
+    accessKey: process.env.MINIO_ACCESS_KEY || 'admin',
+    secretKey: process.env.MINIO_SECRET_KEY || 'admin123456',
+    bucket: process.env.MINIO_BUCKET || 'nova-space',
+    useSSL: process.env.MINIO_USE_SSL === 'true' || false,
+    publicUrl: process.env.MINIO_PUBLIC_URL || '',
+  },
 }));

@@ -1,7 +1,12 @@
 <template>
   <div class="intelligence-detail-view">
-    <a-spin :spinning="loading">
-      <div v-if="detail" class="detail-container">
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <a-spin size="large" />
+      <p>加载中...</p>
+    </div>
+
+    <div v-else-if="detail" class="detail-container">
         <!-- 返回按钮 -->
         <div class="back-nav">
           <a-button type="text" @click="router.push('/intelligence')">
@@ -82,14 +87,13 @@
       </div>
 
       <!-- 加载失败 -->
-      <div v-else-if="!loading" class="error-state">
+      <div v-else class="error-state">
         <a-result status="404" title="情报不存在" sub-title="该情报可能已被删除或您没有访问权限">
           <template #extra>
             <a-button type="primary" @click="router.push('/intelligence')"> 返回情报列表 </a-button>
           </template>
         </a-result>
       </div>
-    </a-spin>
 
     <!-- 阅读更多确认弹窗 -->
     <ActionConfirmModal
@@ -273,6 +277,20 @@ onMounted(() => {
   min-height: calc(100vh - 64px);
   background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
   padding: 40px 24px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 64px - 80px);
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.loading-container p {
+  margin: 0;
 }
 
 .detail-container {

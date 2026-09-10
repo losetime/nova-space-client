@@ -23,12 +23,12 @@ export class AuthService {
     loginDto: LoginDto,
   ): Promise<{ user: schema.User; token: string }> {
     const user = await this.userService.validateUser(
-      loginDto.username,
+      loginDto.email,
       loginDto.password,
     );
 
     if (!user) {
-      throw new UnauthorizedException('用户名或密码错误');
+      throw new UnauthorizedException('邮箱或密码错误');
     }
 
     if (!user.isActive) {

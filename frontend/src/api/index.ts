@@ -128,13 +128,13 @@ api.interceptors.response.use(
 
 // 认证 API
 export const authApi = {
-  register: (data: { username: string; email: string; password: string; code: string }) =>
+  register: (data: { email: string; password: string; code: string }) =>
     api.post<ApiResponse<LoginResponse>>('/auth/register', data),
 
   sendRegisterCode: (data: { email: string }) =>
     api.post<ApiResponse<{ message: string }>>('/auth/send-register-code', data),
 
-  login: (data: { username: string; password: string }) =>
+  login: (data: { email: string; password: string }) =>
     api.post<ApiResponse<LoginResponse>>('/auth/login', data),
 
   profile: () => api.get<ApiResponse<User>>('/auth/profile'),
@@ -159,6 +159,18 @@ export const userApi = {
 
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
     api.put<ApiResponse<void>>('/users/me/password', data),
+
+  uploadAvatar: (file: FormData) =>
+    api.put<ApiResponse<{ url: string }>>('/users/avatar', file),
+}
+
+// 上传 API
+export const uploadApi = {
+  uploadImage: (file: FormData) =>
+    api.post<ApiResponse<{ url: string; filename: string; originalname: string; size: number; mimetype: string }>>(
+      '/upload/image',
+      file,
+    ),
 }
 
 // 积分 API
@@ -205,7 +217,7 @@ export interface MembershipPlan {
   price: number
   pointsPrice: number | null
   description: string | null
-  features: Record<string, any> | null
+  features: Record<string, unknown> | null
   isActive: boolean
   sortOrder: number
   levelInfo: {

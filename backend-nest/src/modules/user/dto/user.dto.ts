@@ -9,10 +9,10 @@ import {
 import { UserLevel } from '../../../common/enums/user.enum';
 
 export class RegisterDto {
+  @IsOptional()
   @IsString()
-  @MinLength(3)
-  @MaxLength(20)
-  username: string;
+  @MaxLength(30)
+  username?: string;
 
   @IsString()
   @MinLength(6)
@@ -45,8 +45,8 @@ export class SendRegisterCodeDto {
 }
 
 export class LoginDto {
-  @IsString()
-  username: string;
+  @IsEmail()
+  email: string;
 
   @IsString()
   password: string;
