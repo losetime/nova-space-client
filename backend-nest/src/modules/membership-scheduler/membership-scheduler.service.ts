@@ -3,10 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { DRIZZLE } from '../../db/drizzle.module';
 import type { DrizzleClient } from '../../db';
 import * as schema from '../../db/schema';
-import { eq, and, lt, gte, desc, sql } from 'drizzle-orm';
+import { eq, and, lt, gte } from 'drizzle-orm';
 import { NotificationService } from '../notification/notification.service';
-
-type PlanLevel = 'basic' | 'advanced' | 'professional';
 
 @Injectable()
 export class MembershipSchedulerService {

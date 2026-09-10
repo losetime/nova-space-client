@@ -166,7 +166,6 @@ import {
   BellOutlined,
   MailOutlined,
   SettingOutlined,
-  ThunderboltOutlined,
   ReadOutlined,
   CheckOutlined,
   LoadingOutlined,

@@ -2,12 +2,15 @@ import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import { DRIZZLE } from '../../../db/drizzle.module';
 import type { DrizzleClient } from '../../../db';
 import * as schema from '../../../db/schema';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type {
   TLEData,
   SatelliteMetadata,
 } from '../interfaces/satellite.interface';
+
+type SatelliteMetadataEntity = typeof schema.satelliteMetadata.$inferSelect;
+type SatelliteMetadataInsert = typeof schema.satelliteMetadata.$inferInsert;
 
 @Injectable()
 export class SatelliteDataService implements OnModuleInit {
@@ -43,7 +46,7 @@ export class SatelliteDataService implements OnModuleInit {
       .from(schema.satelliteMetadata);
 
     const completenessScores = new Map<string, number>();
-    metadataEntities.forEach((entity: any) => {
+    metadataEntities.forEach((entity) => {
       const score = Object.values(entity).filter(
         (v) => v !== null && v !== undefined,
       ).length;
@@ -61,7 +64,7 @@ export class SatelliteDataService implements OnModuleInit {
       return timeB - timeA;
     });
 
-    this.cachedTLEs = tleEntities.map((entity: any) => ({
+    this.cachedTLEs = tleEntities.map((entity) => ({
       name: entity.name,
       noradId: entity.noradId,
       line1: entity.line1,
@@ -75,7 +78,7 @@ export class SatelliteDataService implements OnModuleInit {
     }));
 
     this.cachedMetadata.clear();
-    metadataEntities.forEach((entity: any) => {
+    metadataEntities.forEach((entity) => {
       this.cachedMetadata.set(entity.noradId, {
         countryCode: entity.countryCode || undefined,
         mission: entity.mission || undefined,
@@ -112,19 +115,19 @@ export class SatelliteDataService implements OnModuleInit {
       .from(schema.satelliteMetadata)
       .where(eq(schema.satelliteMetadata.noradId, noradId));
     if (!entity) return null;
-    return this.entityToMetadata(entity as any);
+    return this.entityToMetadata(entity);
   }
 
   async getAllMetadata(): Promise<Map<string, SatelliteMetadata>> {
     const entities = await this.db.select().from(schema.satelliteMetadata);
     const map = new Map<string, SatelliteMetadata>();
-    entities.forEach((entity: any) =>
+    entities.forEach((entity) =>
       map.set(entity.noradId, this.entityToMetadata(entity)),
     );
     return map;
   }
 
-  private entityToMetadata(entity: any): SatelliteMetadata {
+  private entityToMetadata(entity: SatelliteMetadataEntity): SatelliteMetadata {
     let tleAge: number | undefined;
     if (entity.tleEpoch) {
       const ageMs = Date.now() - entity.tleEpoch.getTime();
@@ -138,10 +141,10 @@ export class SatelliteDataService implements OnModuleInit {
       objectType: entity.objectType ?? undefined,
       status: entity.status ?? undefined,
       countryCode: entity.countryCode ?? undefined,
-      launchDate: entity.launchDate ?? undefined,
+      launchDate: entity.launchDate?.toISOString(),
       launchSite: entity.launchSite ?? undefined,
       launchVehicle: entity.launchVehicle ?? undefined,
-      decayDate: entity.decayDate ?? undefined,
+      decayDate: entity.decayDate?.toISOString(),
       period: entity.period ?? undefined,
       inclination: entity.inclination ?? undefined,
       apogee: entity.apogee ?? undefined,
@@ -160,7 +163,7 @@ export class SatelliteDataService implements OnModuleInit {
       dimensions: entity.dimensions ?? undefined,
       span: entity.span ?? undefined,
       mission: entity.mission ?? undefined,
-      firstEpoch: entity.firstEpoch ?? undefined,
+      firstEpoch: entity.firstEpoch?.toISOString(),
       operator: entity.operator ?? undefined,
       manufacturer: entity.manufacturer ?? undefined,
       contractor: entity.contractor ?? undefined,
@@ -177,13 +180,13 @@ export class SatelliteDataService implements OnModuleInit {
       payload: entity.payload ?? undefined,
       constellationName: entity.constellationName ?? undefined,
       lifetime: entity.lifetime ?? undefined,
-      predDecayDate: entity.predDecayDate ?? undefined,
+      predDecayDate: entity.predDecayDate?.toISOString(),
       flightNo: entity.flightNo ?? undefined,
       cosparLaunchNo: entity.cosparLaunchNo ?? undefined,
       launchFailure: entity.launchFailure ?? undefined,
       launchSiteName: entity.launchSiteName ?? undefined,
       summary: entity.summary ?? undefined,
-      stable_date: entity.stableDate ?? undefined,
+      stable_date: entity.stableDate?.toISOString(),
       launch_pad: entity.launchPad ?? undefined,
       material_composition: entity.materialComposition ?? undefined,
       major_events: entity.majorEvents ?? undefined,
@@ -192,7 +195,10 @@ export class SatelliteDataService implements OnModuleInit {
     };
   }
 
-  async updateSatelliteMetadata(noradId: string, data: any): Promise<void> {
+  async updateSatelliteMetadata(
+    noradId: string,
+    data: SatelliteMetadataInsert,
+  ): Promise<void> {
     await this.db
       .update(schema.satelliteMetadata)
       .set(data)

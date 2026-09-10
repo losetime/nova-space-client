@@ -638,17 +638,6 @@ const getFavoriteLabel = (type: string | null): string => {
   return labels[type] || "全部";
 };
 
-// 颜色分类标签
-const getColorSchemeLabel = (scheme: ColorSchemeType): string => {
-  const labels: Record<ColorSchemeType, string> = {
-    orbit: "轨道分类",
-    mission: "任务分类",
-    country: "国家分类",
-    objectType: "类型分类",
-  };
-  return labels[scheme] || "轨道分类";
-};
-
 // 获取国家选择标签文本（不含国旗）
 const getCountryLabel = (code: string | null): string => {
   if (!code) return "全部";
@@ -747,7 +736,6 @@ const {
   selectedSatellite,
   selectedMetadata,
   handleSelectSatellite: baseHandleSelectSatellite,
-  clearSelection,
 } = useSatellite(cesium, localSatellites);
 
 // 子组件引用

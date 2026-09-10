@@ -165,7 +165,6 @@ import {
   type MemberLevelData,
   type MembershipPlan,
   type MembershipStatus,
-  type Benefit,
 } from "@/api";
 
 const loading = ref(true);
@@ -222,12 +221,6 @@ async function fetchData() {
   } finally {
     loading.value = false;
   }
-}
-
-function handleBuy(level: MemberLevelData, plan: MembershipPlan) {
-  selectedLevel.value = level;
-  selectedPlan.value = plan;
-  showBuyDialog.value = true;
 }
 
 function confirmBuy() {

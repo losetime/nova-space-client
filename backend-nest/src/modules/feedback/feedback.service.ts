@@ -51,7 +51,10 @@ export class FeedbackService {
   ): Promise<schema.Feedback | null> {
     await this.db
       .update(schema.feedback)
-      .set({ status: status as any, updatedAt: new Date() })
+      .set({
+        status: status as 'pending' | 'processing' | 'resolved' | 'closed',
+        updatedAt: new Date(),
+      })
       .where(eq(schema.feedback.id, id));
     return this.findOne(id);
   }

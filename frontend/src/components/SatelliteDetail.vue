@@ -630,7 +630,7 @@ import type { Satellite } from "@/hooks/useLocalSatellites";
 import FlagIcon from "@/components/FlagIcon.vue";
 import { satelliteApi } from "@/api";
 import { useUserStore } from "@/stores/user";
-import { COUNTRY_NAMES, LAUNCH_SITES, OBJECT_TYPES, STATUS_LABELS } from "@/constants/satellite";
+import { COUNTRY_NAMES, LAUNCH_SITES, STATUS_LABELS } from "@/constants/satellite";
 
 // 元数据接口
 interface SatelliteMetadata {
@@ -809,14 +809,6 @@ const formatNumber = (num: number | undefined | null, decimals: number): string 
   return num.toFixed(decimals);
 };
 
-const formatTime = (timestamp: string): string => {
-  return new Date(timestamp).toLocaleTimeString("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-};
-
 const formatDate = (date: string): string => {
   return new Date(date).toLocaleDateString("zh-CN", {
     year: "numeric",
@@ -867,16 +859,6 @@ const formatLongitude = (lng: number): string => {
 
 const getLaunchSiteName = (code: string): string => {
   return LAUNCH_SITES[code] || code;
-};
-
-const getObjectTypeLabel = (type: string | undefined): string => {
-  if (!type) return "--";
-  return OBJECT_TYPES[type]?.label || type;
-};
-
-const getObjectTypeClass = (type: string | undefined): string => {
-  if (!type) return "";
-  return OBJECT_TYPES[type]?.class || "";
 };
 
 const getStatusLabel = (status: string | undefined): string => {

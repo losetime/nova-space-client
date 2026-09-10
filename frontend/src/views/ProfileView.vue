@@ -13,12 +13,7 @@
         <!-- 头像和基本信息 -->
         <div class="user-hero">
           <div class="avatar-wrapper">
-            <div class="avatar-ring">
-              <div class="avatar">
-                <UserOutlined />
-              </div>
-              <div class="avatar-glow"></div>
-            </div>
+            <UserAvatar :user="userStore.user" :size="72" glow />
           </div>
           <div class="user-basic">
             <div class="user-name-row">
@@ -30,13 +25,15 @@
               </span>
             </div>
             <p class="user-meta">
-              <span class="user-id">@{{ userStore.user?.username }}</span>
-              <span class="divider">·</span>
               <span class="user-email">{{ userStore.user?.email }}</span>
               <span class="divider">·</span>
               <span class="user-points">💎 {{ userStore.user?.points || 0 }} 积分</span>
             </p>
           </div>
+          <a-button class="settings-btn" @click="router.push('/settings')">
+            <SettingOutlined />
+            设置
+          </a-button>
         </div>
         
         <!-- 会员信息卡片 -->
@@ -188,97 +185,6 @@
               </a-spin>
             </div>
           </a-tab-pane>
-
-          <!-- 设置 -->
-          <a-tab-pane key="settings" tab="设置">
-            <div class="settings-section">
-              <div class="settings-group">
-                <h3>账号信息</h3>
-                <div class="settings-form">
-                  <div class="form-row">
-                    <div class="form-item">
-                      <label>用户名</label>
-                      <input type="text" :value="userStore.user?.username" disabled />
-                    </div>
-                    <div class="form-item">
-                      <label>邮箱</label>
-                      <input type="email" :value="userStore.user?.email" disabled />
-                    </div>
-                  </div>
-                  <div class="form-item">
-                    <label>昵称</label>
-                    <input type="text" v-model="editForm.nickname" placeholder="设置一个昵称" />
-                  </div>
-                  <button class="save-btn" :disabled="updateLoading" @click="handleUpdateProfile">
-                    <template v-if="updateLoading">
-                      <LoadingOutlined class="spin" />
-                      <span>保存中...</span>
-                    </template>
-                    <template v-else>
-                      <SaveOutlined />
-                      <span>保存修改</span>
-                    </template>
-                  </button>
-                </div>
-              </div>
-
-              <div class="settings-group">
-                <h3>修改密码</h3>
-                <div class="settings-form">
-                  <div class="form-item">
-                    <label>当前密码</label>
-                    <input
-                      type="password"
-                      v-model="passwordForm.oldPassword"
-                      placeholder="请输入当前密码"
-                    />
-                  </div>
-                  <div class="form-row">
-                    <div class="form-item">
-                      <label>新密码</label>
-                      <input
-                        type="password"
-                        v-model="passwordForm.newPassword"
-                        placeholder="请输入新密码"
-                        autocomplete="new-password"
-                      />
-                    </div>
-                    <div class="form-item">
-                      <label>确认密码</label>
-                      <input
-                        type="password"
-                        v-model="passwordForm.confirmPassword"
-                        placeholder="再次输入新密码"
-                        autocomplete="new-password"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    class="save-btn"
-                    :disabled="passwordLoading"
-                    @click="handleChangePassword"
-                  >
-                    <template v-if="passwordLoading">
-                      <LoadingOutlined class="spin" />
-                      <span>修改中...</span>
-                    </template>
-                    <template v-else>
-                      <LockOutlined />
-                      <span>修改密码</span>
-                    </template>
-                  </button>
-                </div>
-              </div>
-
-              <div class="settings-group danger">
-                <h3>账号操作</h3>
-                <button class="logout-btn" @click="handleLogout">
-                  <LogoutOutlined />
-                  <span>退出登录</span>
-                </button>
-              </div>
-            </div>
-          </a-tab-pane>
         </a-tabs>
       </div>
     </div>
@@ -286,24 +192,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { message } from "ant-design-vue";
 import {
-  UserOutlined,
   BookOutlined,
   LoadingOutlined,
-  SaveOutlined,
-  LockOutlined,
-  LogoutOutlined,
   GlobalOutlined,
   RocketOutlined,
   CrownOutlined,
   CheckOutlined,
   ThunderboltOutlined,
+  SettingOutlined,
 } from "@ant-design/icons-vue";
 import { emitter } from "@/utils/emitter";
 import { useUserStore } from "@/stores/user";
+import UserAvatar from "@/components/UserAvatar.vue";
 import { intelligenceApi, satelliteApi, pointsApi, educationApi, type Intelligence, type SatelliteFavorite, type Article } from "@/api";
 
 // 类型扩展
@@ -333,20 +237,6 @@ const educationCollectLoading = ref(false);
 const satelliteCollectList = ref<SatelliteFavorite[]>([]);
 const satelliteCollectLoading = ref(false);
 
-// 编辑资料
-const editForm = reactive({
-  nickname: "",
-});
-const updateLoading = ref(false);
-
-// 修改密码
-const passwordForm = reactive({
-  oldPassword: "",
-  newPassword: "",
-  confirmPassword: "",
-});
-const passwordLoading = ref(false);
-
 // 签到
 const checkinLoading = ref(false);
 const hasCheckedIn = ref(false);
@@ -365,8 +255,9 @@ async function handleCheckin() {
       hasCheckedIn.value = true;
       message.warning(res.data.message || "今日已签到");
     }
-  } catch (error: any) {
-    if (error.response?.status === 400) {
+  } catch (error: unknown) {
+    const status = (error as { response?: { status?: number } }).response?.status;
+    if (status === 400) {
       hasCheckedIn.value = true;
       message.warning("今日已签到");
     } else {
@@ -469,56 +360,6 @@ function formatFollowDate(dateStr?: string) {
   });
 }
 
-// 更新资料
-async function handleUpdateProfile() {
-  updateLoading.value = true;
-  try {
-    const result = await userStore.updateUser({ nickname: editForm.nickname });
-    if (result.success) {
-      message.success("更新成功");
-    } else {
-      message.error(result.message || "更新失败");
-    }
-  } finally {
-    updateLoading.value = false;
-  }
-}
-
-// 修改密码
-async function handleChangePassword() {
-  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    message.error("两次输入的密码不一致");
-    return;
-  }
-  if (passwordForm.newPassword.length < 6) {
-    message.error("密码至少6个字符");
-    return;
-  }
-
-  passwordLoading.value = true;
-  try {
-    const result = await userStore.changePassword(
-      passwordForm.oldPassword,
-      passwordForm.newPassword,
-    );
-    if (result.success) {
-      message.success("密码修改成功，请重新登录");
-      handleLogout();
-    } else {
-      message.error(result.message || "修改密码失败");
-    }
-  } finally {
-    passwordLoading.value = false;
-  }
-}
-
-// 退出登录
-function handleLogout() {
-  userStore.logout();
-  message.success("已退出登录");
-  router.push("/login");
-}
-
 // 获取等级显示文本
 function getLevelText(level?: string) {
   const levelMap: Record<string, string> = {
@@ -533,7 +374,6 @@ onMounted(async () => {
   if (!userStore.user) {
     await userStore.fetchUser();
   }
-  editForm.nickname = userStore.user?.nickname || "";
   hasCheckedIn.value = userStore.user?.todayCheckedIn || false;
   await Promise.all([fetchIntelligenceCollects(), fetchSatelliteCollects(), fetchEducationCollects()]);
 });
@@ -631,50 +471,25 @@ $text-muted: rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
 }
 
-.avatar-ring {
-  position: relative;
-  width: 72px;
-  height: 72px;
-}
-
-.avatar {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, $primary 0%, $accent 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  color: #fff;
-  position: relative;
-  z-index: 1;
-}
-
-.avatar-glow {
-  position: absolute;
-  inset: -6px;
-  background: linear-gradient(135deg, $primary 0%, $accent 100%);
-  border-radius: 50%;
-  opacity: 0.3;
-  filter: blur(16px);
-  animation: pulse 3s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.05);
-  }
-}
-
 .user-basic {
   flex: 1;
+}
+
+.settings-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: $text-secondary;
+  border-radius: 8px;
+
+  &:hover {
+    color: $primary;
+    border-color: rgba(0, 212, 255, 0.4);
+    background: rgba(0, 212, 255, 0.08);
+  }
 }
 
 .user-name-row {
@@ -989,136 +804,12 @@ $text-muted: rgba(255, 255, 255, 0.4);
   color: $text-muted;
 }
 
-// 设置区域
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.settings-group {
-  padding: 24px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-
-  h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: $text-primary;
-    margin: 0 0 20px;
-  }
-
-  &.danger {
-    border-color: rgba(239, 68, 68, 0.2);
-  }
-}
-
-.settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.form-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-
-  label {
-    font-size: 13px;
-    color: $text-secondary;
-  }
-
-  input {
-    padding: 10px 14px;
-    background: rgba(255, 255, 255, 0.04) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    color: $text-primary;
-    font-size: 14px;
-    transition: all 0.3s;
-
-    &:focus {
-      outline: none;
-      border-color: $primary;
-      background: rgba(255, 255, 255, 0.06) !important;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    &::placeholder {
-      color: $text-muted;
-    }
-  }
-}
-
-.save-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: linear-gradient(135deg, $primary 0%, $accent 100%);
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-  align-self: flex-start;
-
-  &:hover:not(:disabled) {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .spin {
-    animation: spin 1s linear infinite;
-  }
-}
-
 @keyframes spin {
   from {
     transform: rotate(0deg);
   }
   to {
     transform: rotate(360deg);
-  }
-}
-
-.logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
-  color: #ef4444;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.5);
   }
 }
 
@@ -1235,10 +926,6 @@ $text-muted: rgba(255, 255, 255, 0.4);
 
   .satellite-meta {
     align-self: flex-end;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -20,7 +20,12 @@ export class EducationService {
 
     const conditions = [eq(schema.educationArticles.isPublished, true)];
     if (category && category !== 'all') {
-      conditions.push(eq(schema.educationArticles.category, category as any));
+      conditions.push(
+        eq(
+          schema.educationArticles.category,
+          category as 'basic' | 'advanced' | 'mission' | 'people',
+        ),
+      );
     }
 
     const list = await this.db

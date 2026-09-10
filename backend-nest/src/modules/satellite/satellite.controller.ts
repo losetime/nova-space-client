@@ -13,6 +13,7 @@ import { SatelliteDataService } from './services/satellite-data.service';
 import { SatelliteFavoriteService } from './services/satellite-favorite.service';
 import { SatelliteMetadataService } from './services/satellite-metadata.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import type { RequestWithUser } from '../../common/interfaces';
 import type { ObserverPosition } from './interfaces/satellite.interface';
 
 /**
@@ -207,7 +208,7 @@ export class SatelliteController {
    */
   @Get('favorites')
   @UseGuards(JwtAuthGuard)
-  async getUserFavorites(@Req() req: any) {
+  async getUserFavorites(@Req() req: RequestWithUser) {
     const userId = req.user.id;
     const favorites = await this.favoriteService.getUserFavorites(userId);
 
@@ -677,7 +678,10 @@ export class SatelliteController {
    */
   @Post(':noradId/favorite')
   @UseGuards(JwtAuthGuard)
-  async toggleFavorite(@Param('noradId') noradId: string, @Req() req: any) {
+  async toggleFavorite(
+    @Param('noradId') noradId: string,
+    @Req() req: RequestWithUser,
+  ) {
     const userId = req.user.id;
     const result = await this.favoriteService.toggleFavorite(userId, noradId);
 
@@ -694,7 +698,10 @@ export class SatelliteController {
    */
   @Get(':noradId/favorite')
   @UseGuards(JwtAuthGuard)
-  async checkFavorite(@Param('noradId') noradId: string, @Req() req: any) {
+  async checkFavorite(
+    @Param('noradId') noradId: string,
+    @Req() req: RequestWithUser,
+  ) {
     const userId = req.user.id;
     const favorited = await this.favoriteService.isFavorited(userId, noradId);
 

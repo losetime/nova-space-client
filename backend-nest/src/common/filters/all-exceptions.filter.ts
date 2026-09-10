@@ -66,7 +66,7 @@ function detectDatabaseError(exception: unknown): DatabaseError | null {
   if (!(exception instanceof Error)) return null;
 
   const errorMessage = exception.message || '';
-  const errorCode = (exception as any).code || '';
+  const errorCode = (exception as Error & { code?: string }).code || '';
 
   for (const dbError of DATABASE_ERRORS) {
     if (errorMessage.includes(dbError.code) || errorCode === dbError.code) {

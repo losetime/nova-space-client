@@ -7,11 +7,9 @@ import {
 import { DRIZZLE } from '../../db/drizzle.module';
 import type { DrizzleClient } from '../../db';
 import * as schema from '../../db/schema';
-import { eq, and, desc, lt, gte, sql, asc } from 'drizzle-orm';
-import { CreateSubscriptionDto, UpdateSubscriptionDto } from './dto';
+import { eq, and, desc, lt, sql, asc } from 'drizzle-orm';
+import { CreateSubscriptionDto } from './dto';
 import { NotificationService } from '../notification/notification.service';
-
-type PlanLevel = 'basic' | 'advanced' | 'professional';
 
 @Injectable()
 export class SubscriptionService {

@@ -2,7 +2,6 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import * as satellite from 'satellite.js';
 import type {
-  SatellitePosition,
   OrbitPoint,
   SatelliteData,
   OrbitPrediction,
@@ -81,7 +80,11 @@ export class OrbitCalculatorService implements OnModuleInit {
           satrec,
         });
       } catch (error) {
-        this.logger.error(`解析卫星 ${tle.noradId} TLE 错误: ${error.message}`);
+        this.logger.error(
+          `解析卫星 ${tle.noradId} TLE 错误: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
       }
     });
 
@@ -138,7 +141,7 @@ export class OrbitCalculatorService implements OnModuleInit {
   ): OrbitPoint | null {
     try {
       const gmst = satellite.gstime(time);
-      const eci = satellite.propagate(sat.satrec, time);
+      const eci = satellite.propagate(sat.satrec as satellite.SatRec, time);
 
       if (eci && eci.position) {
         const gdPos = satellite.eciToGeodetic(eci.position, gmst);
@@ -164,7 +167,7 @@ export class OrbitCalculatorService implements OnModuleInit {
 
         return point;
       }
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
 
@@ -243,7 +246,7 @@ export class OrbitCalculatorService implements OnModuleInit {
 
     try {
       const gmst = satellite.gstime(time);
-      const eci = satellite.propagate(sat.satrec, time);
+      const eci = satellite.propagate(sat.satrec as satellite.SatRec, time);
 
       if (eci && eci.position && eci.velocity) {
         const gdPos = satellite.eciToGeodetic(eci.position, gmst);
@@ -278,7 +281,11 @@ export class OrbitCalculatorService implements OnModuleInit {
         };
       }
     } catch (error) {
-      this.logger.error(`预测卫星 ${noradId} 位置错误: ${error.message}`);
+      this.logger.error(
+        `预测卫星 ${noradId} 位置错误: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
       return null;
     }
 
@@ -292,11 +299,13 @@ export class OrbitCalculatorService implements OnModuleInit {
     try {
       // 使用 satellite.js 获取轨道参数
       const now = new Date();
-      const positionAndVelocity = satellite.propagate(sat.satrec, now);
+      const positionAndVelocity = satellite.propagate(
+        sat.satrec as satellite.SatRec,
+        now,
+      );
 
       if (positionAndVelocity && positionAndVelocity.position) {
         const positionEci = positionAndVelocity.position;
-        const velocityEci = positionAndVelocity.velocity;
 
         // 计算轨道半径（km）
         const r = Math.sqrt(
@@ -312,7 +321,7 @@ export class OrbitCalculatorService implements OnModuleInit {
         // 转换为分钟
         return Math.round(periodSeconds / 60);
       }
-    } catch (error) {
+    } catch (_error) {
       // 默认返回约 90 分钟（LEO 卫星典型值）
       return 90;
     }
@@ -329,7 +338,7 @@ export class OrbitCalculatorService implements OnModuleInit {
     try {
       // 从 TLE 数据中提取轨道参数
       // satellite.js 的 satrec 对象包含这些信息
-      const satrec = sat.satrec;
+      const satrec = sat.satrec as satellite.SatRec;
 
       // 轨道倾角（弧度转角度）
       const inclination = satellite.radiansToDegrees(satrec.inclo || 0);
@@ -345,7 +354,7 @@ export class OrbitCalculatorService implements OnModuleInit {
         inclination: Math.round(inclination * 100) / 100,
         eccentricity: Math.round(eccentricity * 10000) / 10000,
       };
-    } catch (error) {
+    } catch (_error) {
       return undefined;
     }
   }
@@ -488,11 +497,10 @@ export class OrbitCalculatorService implements OnModuleInit {
       const gmst = satellite.gstime(time);
 
       // 计算卫星 ECI 位置
-      const eci = satellite.propagate(sat.satrec, time);
+      const eci = satellite.propagate(sat.satrec as satellite.SatRec, time);
       if (!eci || !eci.position) return null;
 
       // 计算观察者的 ECF 位置
-      const observerEcf = satellite.geodeticToEcf(observerGd);
 
       // 计算卫星的 ECF 位置
       const satelliteEcf = satellite.eciToEcf(eci.position, gmst);
@@ -505,7 +513,7 @@ export class OrbitCalculatorService implements OnModuleInit {
         elevation: satellite.radiansToDegrees(lookAngles.elevation),
         range: lookAngles.rangeSat || 0,
       };
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -555,7 +563,7 @@ export class OrbitCalculatorService implements OnModuleInit {
       }
 
       // 3. 检查卫星是否被太阳照亮
-      const eci = satellite.propagate(sat.satrec, time);
+      const eci = satellite.propagate(sat.satrec as satellite.SatRec, time);
       if (!eci || !eci.position) {
         return false;
       }
@@ -681,7 +689,7 @@ export class OrbitCalculatorService implements OnModuleInit {
 
       // 计算日照状态
       const sunPos = this.calculateSunPosition(time);
-      const eci = satellite.propagate(sat.satrec, time);
+      const eci = satellite.propagate(sat.satrec as satellite.SatRec, time);
 
       if (!eci?.position) continue;
 
@@ -786,7 +794,7 @@ export class OrbitCalculatorService implements OnModuleInit {
 
     const now = new Date();
     const sunPos = this.calculateSunPosition(now);
-    const eci = satellite.propagate(sat.satrec, now);
+    const eci = satellite.propagate(sat.satrec as satellite.SatRec, now);
 
     if (!eci?.position) return null;
 

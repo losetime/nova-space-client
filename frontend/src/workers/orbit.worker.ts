@@ -7,6 +7,8 @@ import {
   createSingleThreadRuntime,
 } from "satellite.js";
 
+type PropagatorRuntime = Awaited<ReturnType<typeof createSingleThreadRuntime>>;
+
 export type SatelliteStatus = 'ok' | 'error';
 
 export interface TLEData {
@@ -62,7 +64,7 @@ const validSatrecIds: string[] = [];
 const satrecs: satellite.SatRec[] = [];
 // noradId -> WASM 传播池索引（与 validSatrecIds/satrecs 对齐）
 const satIndexMap: Map<string, number> = new Map();
-let propagator: BulkPropagator<any, any> | null = null;
+let propagator: BulkPropagator<[EciBaseCalculator, GmstCalculator, EcfPositionCalculator], PropagatorRuntime> | null = null;
 let isInitialized = false;
 let lastErrorCount = 0;
 

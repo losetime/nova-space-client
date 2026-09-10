@@ -95,7 +95,7 @@ export class NotificationService {
           eq(schema.notifications.userId, userId),
         ),
       );
-    return (result as any).rowCount > 0;
+    return (result as unknown as { rowCount: number }).rowCount > 0;
   }
 
   async markAllAsRead(userId: string): Promise<number> {
@@ -108,7 +108,7 @@ export class NotificationService {
           eq(schema.notifications.isRead, false),
         ),
       );
-    return (result as any).rowCount;
+    return (result as unknown as { rowCount: number }).rowCount;
   }
 
   async delete(userId: string, notificationId: string): Promise<boolean> {
@@ -120,7 +120,7 @@ export class NotificationService {
           eq(schema.notifications.userId, userId),
         ),
       );
-    return (result as any).rowCount > 0;
+    return (result as unknown as { rowCount: number }).rowCount > 0;
   }
 
   async clearRead(userId: string): Promise<number> {
@@ -132,7 +132,7 @@ export class NotificationService {
           eq(schema.notifications.isRead, true),
         ),
       );
-    return (result as any).rowCount;
+    return (result as unknown as { rowCount: number }).rowCount;
   }
 
   async notifyIntelligencePublish(

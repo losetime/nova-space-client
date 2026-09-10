@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { DRIZZLE } from '../../db/drizzle.module';
 import type { DrizzleClient } from '../../db';
 import * as schema from '../../db/schema';
-import { eq, and, desc, sql, gte, asc } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, asc, type SQL } from 'drizzle-orm';
 import {
   CreateMilestoneDto,
   UpdateMilestoneDto,
@@ -27,7 +27,12 @@ export class MilestoneService {
     const conditions = [eq(schema.milestones.isPublished, true)];
 
     if (category) {
-      conditions.push(eq(schema.milestones.category, category as any));
+      conditions.push(
+        eq(
+          schema.milestones.category,
+          category as 'launch' | 'recovery' | 'orbit' | 'mission' | 'other',
+        ),
+      );
     }
 
     const list = await this.db
@@ -39,12 +44,12 @@ export class MilestoneService {
           ? desc(
               schema.milestones[
                 sortBy as keyof typeof schema.milestones.$inferSelect
-              ] as any,
+              ] as unknown as SQL,
             )
           : asc(
               schema.milestones[
                 sortBy as keyof typeof schema.milestones.$inferSelect
-              ] as any,
+              ] as unknown as SQL,
             ),
       )
       .limit(pageSize)

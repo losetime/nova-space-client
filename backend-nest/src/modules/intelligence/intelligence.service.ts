@@ -6,7 +6,6 @@ import { eq, desc, and, sql, type SQLWrapper } from 'drizzle-orm';
 import { CreateIntelligenceDto } from './dto/create-intelligence.dto';
 import { QueryIntelligenceDto } from './dto/query-intelligence.dto';
 
-type IntelligenceLevel = 'basic' | 'professional';
 type IntelligenceCategory =
   | 'satellite'
   | 'launch'

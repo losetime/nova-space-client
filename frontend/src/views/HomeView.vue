@@ -178,7 +178,18 @@ const loadStats = async () => {
   }
 };
 
-const latestIntelligence = ref<any[]>([]);
+interface LatestIntelligenceItem {
+  id: number;
+  type: string;
+  tag: string;
+  title: string;
+  summary: string;
+  date: string;
+  source: string;
+  isLocked?: boolean;
+}
+
+const latestIntelligence = ref<LatestIntelligenceItem[]>([]);
 const intelligenceLoading = ref(false);
 
 const categoryMap: Record<string, { tag: string; type: string }> = {
@@ -202,6 +213,7 @@ const loadIntelligence = async () => {
       latestIntelligence.value = res.data.data.list.map((item) => {
         const map = categoryMap[item.category] || { tag: item.category, type: item.category };
         return {
+          id: item.id,
           type: map.type,
           tag: map.tag,
           title: item.title,
@@ -219,7 +231,7 @@ const loadIntelligence = async () => {
   }
 };
 
-const handleIntelligenceClick = (item: any) => {
+const handleIntelligenceClick = (item: LatestIntelligenceItem) => {
   if (item.isLocked) {
     if (!userStore.isLoggedIn) {
       message.warning("请先登录");
