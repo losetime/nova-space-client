@@ -5,8 +5,11 @@ import {
   MinLength,
   MaxLength,
   IsEnum,
+  Matches,
 } from 'class-validator';
 import { UserLevel } from '../../../common/enums/user.enum';
+
+export const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d)[\s\S]{6,20}$/;
 
 export class RegisterDto {
   @IsOptional()
@@ -16,7 +19,10 @@ export class RegisterDto {
 
   @IsString()
   @MinLength(6)
-  @MaxLength(50)
+  @MaxLength(20)
+  @Matches(PASSWORD_RULE, {
+    message: '密码需包含字母和数字，长度为6-20位',
+  })
   password: string;
 
   @IsOptional()
@@ -77,6 +83,10 @@ export class ChangePasswordDto {
 
   @IsString()
   @MinLength(6)
+  @MaxLength(20)
+  @Matches(PASSWORD_RULE, {
+    message: '密码需包含字母和数字，长度为6-20位',
+  })
   newPassword: string;
 }
 
@@ -96,7 +106,10 @@ export class ResetPasswordDto {
 
   @IsString()
   @MinLength(6)
-  @MaxLength(50)
+  @MaxLength(20)
+  @Matches(PASSWORD_RULE, {
+    message: '密码需包含字母和数字，长度为6-20位',
+  })
   newPassword: string;
 }
 

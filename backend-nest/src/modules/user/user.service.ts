@@ -86,7 +86,8 @@ export class UserService {
   }
 
   private async generateUsername(email: string): Promise<string> {
-    const base = (email.split('@')[0] || '').slice(0, 30) || 'user';
+    const local = (email.split('@')[0] || '').split('.')[0];
+    const base = (local || '').slice(0, 30) || 'user';
     let candidate = base;
     let n = 1;
     for (;;) {

@@ -11,7 +11,6 @@
       <div class="settings-header">
         <a-button class="back-btn" @click="router.push('/profile')">
           <ArrowLeftOutlined />
-          返回个人中心
         </a-button>
         <h1 class="page-title">账号设置</h1>
       </div>
@@ -21,7 +20,7 @@
         <div class="settings-group">
           <h3>修改头像</h3>
           <div class="avatar-row">
-            <UserAvatar :user="userStore.user" :size="96" glow />
+            <UserAvatar :user="userStore.user" :size="96" />
             <div class="avatar-actions">
               <a-upload
                 :show-upload-list="false"
@@ -217,8 +216,8 @@ async function handleChangePassword() {
     message.error("两次输入的密码不一致");
     return;
   }
-  if (passwordForm.newPassword.length < 6) {
-    message.error("密码至少6个字符");
+  if (!/^(?=.*[A-Za-z])(?=.*\d)[\s\S]{6,20}$/.test(passwordForm.newPassword)) {
+    message.error("密码需包含字母和数字，长度为6-20位");
     return;
   }
 

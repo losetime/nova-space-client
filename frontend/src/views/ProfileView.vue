@@ -13,7 +13,7 @@
         <!-- 头像和基本信息 -->
         <div class="user-hero">
           <div class="avatar-wrapper">
-            <UserAvatar :user="userStore.user" :size="72" glow />
+            <UserAvatar :user="userStore.user" :size="72" />
           </div>
           <div class="user-basic">
             <div class="user-name-row">

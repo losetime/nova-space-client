@@ -27,6 +27,11 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/minio': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/minio/, '/nova-space'),
+      }
     },
   },
   optimizeDeps: {

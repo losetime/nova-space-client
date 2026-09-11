@@ -66,9 +66,6 @@ export interface Subscription {
 const api: AxiosInstance = axios.create({
   baseURL: '/api',
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
 // 请求拦截器 - 添加 Token
